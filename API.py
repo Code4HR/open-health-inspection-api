@@ -1,4 +1,4 @@
-from pymongo import MongoClient
+import mongolab
 from bson.objectid import ObjectId
 import json
 from flask import Flask, Response, url_for
@@ -8,8 +8,7 @@ app = Flask(__name__)
 app.config['TESTING'] = True
 app.debug = True
 
-client = MongoClient('mongodb://cfa:cfa123@ds033639.mongolab.com:33639/healthdata')
-db = client.healthdata
+db = mongolab.connect()
 
 
 @app.route('/')

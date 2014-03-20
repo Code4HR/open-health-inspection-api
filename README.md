@@ -5,6 +5,8 @@ The API for the Open Health Inspection app.
 
 This API provides an interface to a MongoDB containing data from the Virginia Department of Health on inspections of food service facilities. Data is returned via JSON. To get the current list of routes make a call to the root URL.
 
+It can be implemented very simply using Flask with [WSGI on Apache](http://flask.pocoo.org/docs/deploying/mod_wsgi/), or very simply on [Heroku with Gunicorn](https://devcenter.heroku.com/articles/getting-started-with-python).
+
 Routes implemented:
 
 * /vendors - provides a complete list of food service vendors
