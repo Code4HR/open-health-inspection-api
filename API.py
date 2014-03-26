@@ -3,12 +3,16 @@ from bson.objectid import ObjectId
 import json
 from flask import Flask, Response, url_for
 import re
+import logging
 
 app = Flask(__name__)
 app.config['TESTING'] = True
 app.debug = True
 
-db = mongolab.connect()
+try:
+    db = mongolab.connect()
+except ValueError:
+    print "Could not connect to database"
 
 
 @app.route('/')
@@ -41,7 +45,7 @@ def api_vendors():
 def api_vendor_text_search(searchstring):
 
     regex = re.compile(re.escape(searchstring), re.IGNORECASE)
-    data = db.va.find({ 'name': regex}, {'name': 1, 'address': 1})
+    data = db.va.find({ '$or': [{ 'name': regex}, {'address': regex}]}, {'name': 1, 'address': 1})
 
     if data.count() == 0:
         resp = Response(status=204)
@@ -60,6 +64,7 @@ def api_vendor_text_search(searchstring):
 
 @app.route('/vendors/geosearch/<lat>/<long>/<dist>')
 def api_vendor_geo_search(lat, long, dist):
+
     return Response('{"message": "route not implemented"}', status=501)
 
 
