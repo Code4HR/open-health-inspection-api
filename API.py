@@ -1,7 +1,8 @@
 import mongolab
 from bson.objectid import ObjectId
 import json
-from flask import Flask, Response, url_for
+from flask import Flask, Response, url_for, request, current_app
+from functools import wraps
 import re
 import logging
 
@@ -14,8 +15,21 @@ try:
 except ValueError:
     print "Could not connect to database"
 
+def support_jsonp(f):
+    """Wraps JSONified output for JSONP"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        callback = request.args.get('callback', False)
+        if callback:
+            content = str(callback) + '(' + str(f(*args, **kwargs)) + ')'
+            return current_app.response_class(content, mimetype='application/json')
+        else:
+            return Response(f(*args, **kwargs), mimetype='application/json')
+    return decorated_function
+
 
 @app.route('/')
+@support_jsonp
 def api_root():
     links = []
     for rule in app.url_map.iter_rules():
@@ -26,6 +40,7 @@ def api_root():
 
 
 @app.route('/vendors')
+@support_jsonp
 def api_vendors():
     data = db.va.find({}, {'name': 1, 'address': 1})
     if data.count() > 0:
@@ -42,10 +57,11 @@ def api_vendors():
 
 
 @app.route('/vendors/textsearch/<searchstring>')
+@support_jsonp
 def api_vendor_text_search(searchstring):
 
     regex = re.compile(re.escape(searchstring), re.IGNORECASE)
-    data = db.va.find({ '$or': [{ 'name': regex}, {'address': regex}]}, {'name': 1, 'address': 1})
+    data = db.va.find({ '$or': [{ 'name': regex}, {'address': regex}, {'city': regex}]}, {'name': 1, 'address': 1})
 
     if data.count() == 0:
         resp = Response(status=204)
@@ -62,13 +78,15 @@ def api_vendor_text_search(searchstring):
     return resp
 
 
-@app.route('/vendors/geosearch/<lat>/<long>/<dist>')
-def api_vendor_geo_search(lat, long, dist):
-
+@app.route('/vendors/geosearch/<lat>/<lng>/<dist>')
+@support_jsonp
+def api_vendor_geo_search(lat, lng, dist):
+    data = db.va.find({'geo': { '$nearSphere': { '$geometry': { 'type': 'Point', 'coordinates': [ lng, lat]}, '$maxDistance': dist}}},  {'name': 1, 'address': 1})
     return Response('{"message": "route not implemented"}', status=501)
 
 
 @app.route('/vendor/<vendorid>')
+@support_jsonp
 def api_vendor(vendorid):
 
     data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1, 'address': 1, 'inspections.0': { '$slice': 1}}).sort('inspection.date')
@@ -90,6 +108,7 @@ def api_vendor(vendorid):
 
 
 @app.route('/inspections/<vendorid>')
+@support_jsonp
 def api_inspections(vendorid):
     return Response('{"message": "route not implemented"}', status=501)
 
