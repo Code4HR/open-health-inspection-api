@@ -7,19 +7,45 @@ This API provides an interface to a MongoDB containing data from the Virginia De
 
 It can be implemented very simply using Flask with [WSGI on Apache](http://flask.pocoo.org/docs/deploying/mod_wsgi/), or very simply on [Heroku with Gunicorn](https://devcenter.heroku.com/articles/getting-started-with-python).
 
-Routes implemented:
+#####Routes implemented
+<table>
+<tr>
+<th>Route</th>
+<th>Description</th>
+</tr>
+<td>/vendors</td>
+<td>provides a complete list of food service vendors</td>
+</tr>
+<tr>
+<td colspan=2>returns name, API url, address, and coordinates for each vendor</td>
+</tr>
+<tr>
+<td>/vendors/textsearch/&lt;searchstring&gt;</td>
+<td>Allows searching of the vendor database by string. Search name, address, and city</td>
+</tr>
+<tr>
+<td colspan=2>returns name, API url, address, and coordinates for each vendor</td>
+</tr>
+<tr>
+<td>/vendors/geosearch/&lt;lng&gt;/&lt;lat&gt;/&lt;dist&gt;</td>
+<td>return all vendors within &lt;dist&gt; distance (in meters) of &lt;lng&gt; longitude and &lt;lat&gt; latitude</td>
+</tr>
+<tr>
+<td colspan=2>returns name, API url, address, and coordinates for each vendor</td>
+</tr>
+<tr>
+<td>/vendor/&lt;vendorid&gt;</td>
+<td>provides information on a specific vendor identified by <vendorid&gt;</td>
+</tr>
+<tr>
+<td colspan=2>returns name, address, coordinates, and most recent inspection information</td>
+</tr>
+<td>/inspections/&lt;vendorid&gt;</td>
+<td>list all inspections of a given vendor</td>
+</tr>
+</table>
 
-* /vendors - provides a complete list of food service vendors
-    * returns name, API url, and address for each vendor
-* /vendors/textsearch/&lt;searchstring&gt; - Allows searching of the vendor database by string, currently only searches name
-    * returns name, API url, and address for each vendor
-* /vendors/geosearch/&lt;lng&gt;/&lt;lat&gt;/&lt;dist&gt; - return all vendors within &lt;dist&gt; distance (in meters) of &lt;lng&gt; longitude and &lt;lat&gt; latitude
-    * returns name, API url, address, and coordinates for each vendor
-* /vendor/&lt;vendorid&gt; - provides information on a specific vendor identified by <vendorid&gt;
-    * returns name, address, and most recent inspection information
-* /inspections/&lt;vendorid&gt; - list all inspections of a given vendor
-
-Routes planned:
-* ???
+#####Routes planned
+???
 
 

@@ -7,8 +7,8 @@ import re
 
 
 app = Flask(__name__)
-#app.config['TESTING'] = True
-#app.debug = True
+app.config['TESTING'] = True
+app.debug = True
 
 try:
     db = mongolab.connect()
@@ -44,14 +44,17 @@ def api_root():
 @app.route('/vendors')
 @support_jsonp
 def api_vendors():
-    data = db.va.find({}, {'name': 1, 'address': 1})
+    data = db.va.find({}, {'name': 1, 'address': 1, 'geo.coordinates': 1})
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
     else:
         vendor_list = {}
         for item in data:
             url = url_for("api_vendor", vendorid=str(item["_id"]))
-            vendor_list[str(item["_id"])] = {'url': url, 'name': item["name"], 'address': item["address"]}
+            vendor_list[str(item["_id"])] = {'url': url,
+                                             'name': item["name"],
+                                             'address': item["address"],
+                                             'coordinates': item["geo"]["coordinates"]}
 
         resp = json.dumps(vendor_list)
 
@@ -63,7 +66,8 @@ def api_vendors():
 def api_vendor_text_search(searchstring):
 
     regex = re.compile(re.escape(searchstring), re.IGNORECASE)
-    data = db.va.find({ '$or': [{ 'name': regex}, {'address': regex}, {'city': regex}]}, {'name': 1, 'address': 1})
+    data = db.va.find({ '$or': [{ 'name': regex}, {'address': regex}, {'city': regex}]},
+                      {'name': 1, 'address': 1, 'geo.coordinates': 1})
 
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
@@ -71,7 +75,10 @@ def api_vendor_text_search(searchstring):
         vendor_list = {}
         for item in data:
             url = url_for('api_vendor', vendorid=item["_id"])
-            vendor_list[str(item["_id"])] = dict({'url': url, 'name': item["name"], 'address': item["address"]})
+            vendor_list[str(item["_id"])] = {'url': url,
+                                             'name': item["name"],
+                                             'address': item["address"],
+                                             'coordinates': item["geo"]["coordinates"]}
 
         resp = json.dumps(vendor_list)
 
@@ -89,7 +96,10 @@ def api_vendor_geo_search(lng, lat, dist):
         vendors = {}
         for item in data:
             url = url_for("api_vendor", vendorid=str(item["_id"]))
-            vendors[str(item["_id"])] = {'url': url, 'name': item["name"], 'address': item["address"], 'coordinates': item["geo"]["coordinates"]}
+            vendors[str(item["_id"])] = {'url': url,
+                                         'name': item["name"],
+                                         'address': item["address"],
+                                         'coordinates': item["geo"]["coordinates"]}
         resp = json.dumps(vendors)
 
     return resp
@@ -101,7 +111,8 @@ def api_vendor(vendorid):
 
     data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1,
                                                     'address': 1,
-                                                    'inspections.0': {'$slice': 1}}).sort('inspection.date')
+                                                    'inspections.0': {'$slice': 1},
+                                                    'geo.coordinates': 1}).sort('inspection.date')
 
     if data.count() == 1:
         item = data[0]
@@ -109,7 +120,8 @@ def api_vendor(vendorid):
         vendor = {str(item["_id"]): {'name': item["name"],
                                      'address': item["address"],
                                      'last_inspection_date': inspection["date"],
-                                     'violations': inspection["violations"]}}
+                                     'violations': inspection["violations"],
+                                     'coordinates': item["geo"]["coordinates"]}}
         resp = json.dumps(vendor)
     elif data.count() > 1:
         resp = json.dumps({'status': '300'})
@@ -123,13 +135,17 @@ def api_vendor(vendorid):
 @support_jsonp
 def api_inspections(vendorid):
 
-    data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1, 'address': 1, 'last_inspection_date': 1, 'inspections': 1})
+    data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1, 'address': 1,
+                                                    'last_inspection_date': 1,
+                                                    'inspections': 1,
+                                                    'geo.coordinates': 1})
 
     if data.count() == 1:
         vendor = {str(data[0]["_id"]): {'name': data[0]["name"],
                                         'address': data[0]["address"],
                                         'last_inspection_date': data[0]["last_inspection_date"],
-                                        'inspections': data[0]["inspections"]}}
+                                        'inspections': data[0]["inspections"],
+                                        'coordinates': data[0]["geo"]["coordinates"]}}
         resp = json.dumps(vendor)
     elif data.count() > 1:
         resp = json.dumps({'status': '300'})
