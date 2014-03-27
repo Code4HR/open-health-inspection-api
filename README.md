@@ -19,4 +19,4 @@ Routes implemented:
 
 Routes planned:
 
-* /vendors/geosearch/&lt;lat&gt;/&lt;long&gt;/&lt;dist&gt; - return all vendors with &lt;dist&gt; distance of &lt;lat&gt; latitude and &lt;long&gt; longitude
+* /vendors/geosearch/&lt;lng&gt;/&lt;lat&gt;/&lt;dist&gt; - return all vendors within &lt;dist&gt; distance (in meters) of &lt;lng&gt; longitude and &lt;lat&gt; latitude
