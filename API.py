@@ -1,22 +1,24 @@
 import mongolab
 from bson.objectid import ObjectId
+from bson.son import SON
 import json
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
 import re
-import logging
+
 
 app = Flask(__name__)
-app.config['TESTING'] = True
-app.debug = True
+#app.config['TESTING'] = True
+#app.debug = True
 
 try:
     db = mongolab.connect()
 except ValueError:
     print "Could not connect to database"
 
+
 def support_jsonp(f):
-    """Wraps JSONified output for JSONP"""
+    #Wraps JSONified output for JSONP
     @wraps(f)
     def decorated_function(*args, **kwargs):
         callback = request.args.get('callback', False)
@@ -25,6 +27,7 @@ def support_jsonp(f):
             return current_app.response_class(content, mimetype='application/json')
         else:
             return Response(f(*args, **kwargs), mimetype='application/json')
+
     return decorated_function
 
 
@@ -35,8 +38,8 @@ def api_root():
     for rule in app.url_map.iter_rules():
         if rule.endpoint != 'static':
             links.append(rule.rule)
-    print json.dumps(links)
-    return Response(json.dumps(links), mimetype='application/json')
+
+    return json.dumps(links)
 
 
 @app.route('/vendors')
@@ -49,9 +52,9 @@ def api_vendors():
             url = url_for("api_vendor", vendorid=str(item["_id"]))
             vendor_list[str(item["_id"])] = {'url': url, 'name': item["name"], 'address': item["address"]}
 
-        resp = Response(json.dumps(vendor_list), mimetype='application/json')
+        resp = json.dumps(vendor_list)
     else:
-        resp = Response(status=204)
+        resp = json.dumps({'status': '204'})
 
     return resp
 
@@ -64,7 +67,7 @@ def api_vendor_text_search(searchstring):
     data = db.va.find({ '$or': [{ 'name': regex}, {'address': regex}, {'city': regex}]}, {'name': 1, 'address': 1})
 
     if data.count() == 0:
-        resp = Response(status=204)
+        resp = json.dumps({'status': '204'})
     else:
         vendor_list = {}
         for item in data:
@@ -73,7 +76,7 @@ def api_vendor_text_search(searchstring):
             print url
             vendor_list[str(item["_id"])] = dict({'url': url, 'name': item["name"], 'address': item["address"]})
 
-        resp = Response(json.dumps(vendor_list), mimetype='application/json')
+        resp = json.dumps(vendor_list)
 
     return resp
 
@@ -81,8 +84,10 @@ def api_vendor_text_search(searchstring):
 @app.route('/vendors/geosearch/<lat>/<lng>/<dist>')
 @support_jsonp
 def api_vendor_geo_search(lat, lng, dist):
-    data = db.va.find({'geo': { '$nearSphere': { '$geometry': { 'type': 'Point', 'coordinates': [ lng, lat]}, '$maxDistance': dist}}},  {'name': 1, 'address': 1})
-    return Response('{"message": "route not implemented"}', status=501)
+    #data = db.va.find({'geo': {'$near': [ lng, lat ]}},
+    #                  {'name': 1, 'address': 1})
+    #print data.count()
+    return json.dumps({'status': '204', 'message': 'route not implemented'})
 
 
 @app.route('/vendor/<vendorid>')
@@ -92,17 +97,14 @@ def api_vendor(vendorid):
     data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1, 'address': 1, 'inspections.0': { '$slice': 1}}).sort('inspection.date')
 
     if data.count() == 1:
-        for item in data:
-            inspection = item["inspections"][0]
-            violations = {}
-            for i in range(0,len(inspection["violations"])):
-                violations[i] = {'code': inspection["violations"][i]["code"], 'observations': inspection["violations"][i]["observations"]}
-            vendor = {str(item["_id"]): {'name': item["name"], 'address': item["address"], 'last_inspection_date': inspection["date"], 'violations': violations}}
-        resp = Response(json.dumps(vendor), mimetype='application/json')
+        item = data[0]
+        inspection = item["inspections"][0]
+        vendor = {str(item["_id"]): {'name': item["name"], 'address': item["address"], 'last_inspection_date': inspection["date"], 'violations': inspection["violations"]}}
+        resp = json.dumps(vendor)
     elif data.count() > 1:
-        resp = Response(status=300)
+        resp = json.dumps({'status': '300'})
     else:
-        resp = Response(status=204)
+        resp = json.dumps({'status': '204'})
 
     return resp
 
@@ -110,7 +112,22 @@ def api_vendor(vendorid):
 @app.route('/inspections/<vendorid>')
 @support_jsonp
 def api_inspections(vendorid):
-    return Response('{"message": "route not implemented"}', status=501)
+
+    data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1, 'address': 1, 'last_inspection_date': 1, 'inspections': 1})
+
+    if data.count() == 1:
+        print data[0]['inspections']
+        vendor = {str(data[0]["_id"]): {'name': data[0]["name"],
+                                        'address': data[0]["address"],
+                                        'last_inspection_date': data[0]["last_inspection_date"],
+                                        'inspections': data[0]["inspections"]}}
+        resp = json.dumps(vendor)
+    elif data.count() > 1:
+        resp = json.dumps({'status': '300'})
+    else:
+        resp = json.dumps({'status': '204'})
+
+    return resp
 
 
 if __name__ == '__main__':

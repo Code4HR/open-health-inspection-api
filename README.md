@@ -15,8 +15,8 @@ Routes implemented:
     * returns name, API url, and address for each vendor
 * /vendor/&lt;vendorid&gt; - provides information on a specific vendor identified by <vendorid&gt;
     * returns name, address, and most recent inspection information
+* /inspections/&lt;vendorid&gt; - list all inspections of a given vendor
 
 Routes planned:
 
 * /vendors/geosearch/&lt;lat&gt;/&lt;long&gt;/&lt;dist&gt; - return all vendors with &lt;dist&gt; distance of &lt;lat&gt; latitude and &lt;long&gt; longitude
-* /inspections/&lt;vendorid&gt; - list all inspections of a given vendor
