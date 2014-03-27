@@ -13,10 +13,13 @@ Routes implemented:
     * returns name, API url, and address for each vendor
 * /vendors/textsearch/&lt;searchstring&gt; - Allows searching of the vendor database by string, currently only searches name
     * returns name, API url, and address for each vendor
+* /vendors/geosearch/&lt;lng&gt;/&lt;lat&gt;/&lt;dist&gt; - return all vendors within &lt;dist&gt; distance (in meters) of &lt;lng&gt; longitude and &lt;lat&gt; latitude
+    * returns name, API url, address, and coordinates for each vendor
 * /vendor/&lt;vendorid&gt; - provides information on a specific vendor identified by <vendorid&gt;
     * returns name, address, and most recent inspection information
 * /inspections/&lt;vendorid&gt; - list all inspections of a given vendor
 
 Routes planned:
+* ???
 
-* /vendors/geosearch/&lt;lng&gt;/&lt;lat&gt;/&lt;dist&gt; - return all vendors within &lt;dist&gt; distance (in meters) of &lt;lng&gt; longitude and &lt;lat&gt; latitude
+
