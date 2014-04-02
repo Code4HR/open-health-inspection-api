@@ -91,8 +91,11 @@ def api_vendor_text_search(searchstring):
 @support_jsonp
 def api_vendor_geo_search(lng, lat, dist):
     data = db.va.find({'geo':
-                           {'$within':
-                                   {'$center': [[ float(lng), float(lat)], int(dist)]}}},
+                           {'$near':
+                                {'$geometry':
+                                     {'type': "Point",
+                                      'coordinates': [ float(lng), float(lat)]},
+                                 '$maxDistance': int(dist)}}},
                       {'name': 1,
                        'address': 1,
                        'geo.coordinates': 1})
