@@ -1,9 +1,12 @@
 import mongolab
 import json
 import re
+import csv
+import zipfile
 from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
+from math import hypot
 
 
 app = Flask(__name__)
@@ -104,13 +107,15 @@ def api_vendor_geo_search(lng, lat, dist):
     else:
         vendors = {}
         for item in data:
+            dist = hypot(item['geo']['coordinates'][0] - lat, item['geo']['coordinates'][1] - lng)
             url = url_for('api_vendor', vendorid=str(item['_id']))
             vendors[str(item['_id'])] = {'url': url,
                                          'name': item['name'],
                                          'address': item['address'],
                                          'coordinates': {
                                                  'latitude': item['geo']['coordinates'][0],
-                                                 'longitude': item['geo']['coordinates'][1]}}
+                                                 'longitude': item['geo']['coordinates'][1]},
+                                         'dist': dist}
         resp = json.dumps(vendors)
     return resp
 
@@ -161,6 +166,48 @@ def api_inspections(vendorid):
     else:
         resp = json.dumps({'status': '204'})
     return resp
+
+
+
+@app.route('/lives')
+def api_lives():
+    data = db.va.find({}, {'name': 1,
+                           'address': 1,
+                           'city': 1,
+                           'geo': 1,
+                           'inspections': 1})
+
+    businesses_csv = open('businesses.csv', 'wb')
+    inspections_csv = open('inspections.csv', 'wb')
+    violations_csv = open('violations.csv', 'wb')
+    with zipfile.ZipFile('lives.zip', 'w') as lives_zip:
+        vendors = []
+        inspections = []
+        violations = []
+        for vendor in data:
+            vendors.append([str(vendor["_id"]),
+                      vendor['_id'],
+                      vendor['_id'],
+                      vendor['_id'],
+                      'VA',
+                      '',
+                      vendor['geo']['coordinates'][0],
+                      vendor['geo']['coordinates'][0],
+                      ''])
+        for inspection in vendor['inspections']:
+            inspections.append([str(vendor['_id']),
+                                '',
+                                inspection['date'],
+                                '',
+                                inspections['type']])
+            for violation in inspection['violations']:
+                violations.append([str(vendor['_id']),
+                                   inspection['date'],
+                                   violation['code'][0],
+                                   violation['observation']])
+    businesses_csv.writerows(vendors)
+    inspections_csv.writerows(inspections)
+    violations_csv.writerows(violations)
 
 
 if __name__ == '__main__':
