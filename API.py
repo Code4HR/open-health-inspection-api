@@ -2,11 +2,11 @@ import mongolab
 import json
 import re
 #import csv
-import zipfile
+#import zipfile
+from math import radians, cos, sin, asin, sqrt
 from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
-from math import hypot
 
 
 app = Flask(__name__)
@@ -30,6 +30,22 @@ def support_jsonp(f):
             return Response(f(*args, **kwargs), mimetype='application/json')
     return decorated_function
 
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    # radius of earth in meters
+    m = 6367000 * c
+    return m
 
 @app.route('/')
 @support_jsonp
@@ -90,11 +106,11 @@ def api_vendor_text_search(searchstring):
     return resp
 
 
-@app.route('/vendors/geosearch/<lng>/<lat>/<dist>')
+@app.route('/vendors/geosearch/<lat>/<lng>/<dist>')
 @support_jsonp
 def api_vendor_geo_search(lng, lat, dist):
     data = db.va.find({'geo':
-                           {'$near':
+                           {'$nearSphere':
                                 {'$geometry':
                                      {'type': "Point",
                                       'coordinates': [ float(lng), float(lat)]},
@@ -107,16 +123,16 @@ def api_vendor_geo_search(lng, lat, dist):
     else:
         vendors = {}
         for item in data:
-            difference = hypot(item['geo']['coordinates'][0] - float(lat), item['geo']['coordinates'][1] - float(lng))
-            print difference
             url = url_for('api_vendor', vendorid=str(item['_id']))
+            distance = haversine(float(lng), float(lat), item['geo']['coordinates'][0], item['geo']['coordinates'][1])
             vendors[str(item['_id'])] = {'url': url,
                                          'name': item['name'],
                                          'address': item['address'],
                                          'coordinates': {
                                                  'latitude': item['geo']['coordinates'][0],
                                                  'longitude': item['geo']['coordinates'][1]},
-                                         'dist': round(difference, 2)}
+                                         'dist': distance}
+
         resp = json.dumps(vendors)
     return resp
 
