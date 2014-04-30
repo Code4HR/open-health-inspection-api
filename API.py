@@ -3,7 +3,7 @@ import json
 import re
 #import csv
 #import zipfile
-from math import radians, cos, sin, asin, sqrt
+from math import radians, cos, sin, atan2, sqrt
 from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
@@ -31,20 +31,20 @@ def support_jsonp(f):
     return decorated_function
 
 
-def haversine(lon1, lat1, lon2, lat2):
+def great_circle(lon1, lat1, lon2, lat2):
     """
     Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
     """
     # convert decimal degrees to radians
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # haversine formula
+    # great circle formula
     dlon = lon2 - lon1
     dlat = lat2 - lat1
     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a))
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
     # radius of earth in meters
-    m = 6367000 * c
+    m = 6378137 * c
     return m
 
 @app.route('/')
@@ -62,6 +62,7 @@ def api_root():
 def api_vendors():
     data = db.va.find({}, {'name': 1,
                            'address': 1,
+                           'type': 1,
                            'geo.coordinates': 1})
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
@@ -72,6 +73,7 @@ def api_vendors():
             vendor_list[str(item['_id'])] = {'url': url,
                                              'name': item['name'],
                                              'address': item['address'],
+                                             'type': item['type'],
                                              'coordinates': {
                                                  'latitude': item['geo']['coordinates'][0],
                                                  'longitude': item['geo']['coordinates'][1]}}
@@ -89,6 +91,7 @@ def api_vendor_text_search(searchstring):
                              {'city': regex}]},
                       {'name': 1,
                        'address': 1,
+                       'type': 1,
                        'geo.coordinates': 1})
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
@@ -99,6 +102,7 @@ def api_vendor_text_search(searchstring):
             vendor_list[str(item['_id'])] = {'url': url,
                                              'name': item['name'],
                                              'address': item['address'],
+                                             'type': item['type'],
                                              'coordinates': {
                                                  'latitude': item['geo']['coordinates'][0],
                                                  'longitude': item['geo']['coordinates'][1]}}
@@ -113,10 +117,11 @@ def api_vendor_geo_search(lng, lat, dist):
                            {'$nearSphere':
                                 {'$geometry':
                                      {'type': "Point",
-                                      'coordinates': [ float(lng), float(lat)]},
+                                      'coordinates': [ float(lat), float(lng)]},
                                  '$maxDistance': int(dist)}}},
                       {'name': 1,
                        'address': 1,
+                       'type': 1,
                        'geo.coordinates': 1})
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
@@ -124,14 +129,15 @@ def api_vendor_geo_search(lng, lat, dist):
         vendors = {}
         for item in data:
             url = url_for('api_vendor', vendorid=str(item['_id']))
-            distance = haversine(float(lng), float(lat), item['geo']['coordinates'][0], item['geo']['coordinates'][1])
+            distance = great_circle(float(lng), float(lat), item['geo']['coordinates'][1], item['geo']['coordinates'][0])
             vendors[str(item['_id'])] = {'url': url,
                                          'name': item['name'],
                                          'address': item['address'],
+                                         'type': item['type'],
                                          'coordinates': {
                                                  'latitude': item['geo']['coordinates'][0],
                                                  'longitude': item['geo']['coordinates'][1]},
-                                         'dist': distance}
+                                         'dist': round(distance, 2)}
 
         resp = json.dumps(vendors)
     return resp
@@ -142,6 +148,7 @@ def api_vendor_geo_search(lng, lat, dist):
 def api_vendor(vendorid):
     data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1,
                                                     'address': 1,
+                                                    'type': 1,
                                                     'inspections.0': {'$slice': 1},
                                                     'geo.coordinates': 1}).sort('inspection.date')
     if data.count() == 1:
@@ -149,6 +156,7 @@ def api_vendor(vendorid):
         inspection = item['inspections'][0]
         vendor = {str(item['_id']): {'name': item['name'],
                                      'address': item['address'],
+                                     'type': item['type'],
                                      'last_inspection_date': inspection['date'],
                                      'violations': inspection["violations"],
                                      'coordinates': {
@@ -165,13 +173,16 @@ def api_vendor(vendorid):
 @app.route('/inspections/<vendorid>')
 @support_jsonp
 def api_inspections(vendorid):
-    data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1, 'address': 1,
+    data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1,
+                                                    'address': 1,
+                                                    'type': 1,
                                                     'last_inspection_date': 1,
                                                     'inspections': 1,
                                                     'geo.coordinates': 1})
     if data.count() == 1:
         vendor = {str(data[0]["_id"]): {'name': data[0]['name'],
                                         'address': data[0]['address'],
+                                        'type': data[0]['type'],
                                         'last_inspection_date': data[0]['last_inspection_date'],
                                         'inspections': data[0]['inspections'],
                                         'coordinates': {
@@ -194,37 +205,37 @@ def api_lives():
                            'geo': 1,
                            'inspections': 1})
 
-#    businesses_csv = open('businesses.csv', 'wb')
-#    inspections_csv = open('inspections.csv', 'wb')
-#    violations_csv = open('violations.csv', 'wb')
-#    with zipfile.ZipFile('lives.zip', 'w') as lives_zip:
-#        vendors = []
-#        inspections = []
-#        violations = []
-#        for vendor in data:
-#            vendors.append([str(vendor["_id"]),
-#                      vendor['_id'],
-#                      vendor['_id'],
-#                      vendor['_id'],
- #                     'VA',
- #                     '',
- #                     vendor['geo']['coordinates'][0],
- #                     vendor['geo']['coordinates'][0],
- #                     ''])
-#        for inspection in vendor['inspections']:
-#            inspections.append([str(vendor['_id']),
-#                                '',
-#                                inspection['date'],
-#                                '',
-#                                inspections['type']])
-#            for violation in inspection['violations']:
-#                violations.append([str(vendor['_id']),
-#                                   inspection['date'],
-#                                   violation['code'][0],
-#                                   violation['observation']])
-#    businesses_csv.writerows(vendors)
-#    inspections_csv.writerows(inspections)
-#    violations_csv.writerows(violations)
+    businesses_csv = open('businesses.csv', 'wb')
+    inspections_csv = open('inspections.csv', 'wb')
+    violations_csv = open('violations.csv', 'wb')
+    with zipfile.ZipFile('lives.zip', 'w') as lives_zip:
+        vendors = []
+        inspections = []
+        violations = []
+        for vendor in data:
+            vendors.append([str(vendor["_id"]),
+                      vendor['_id'],
+                      vendor['_id'],
+                      vendor['_id'],
+                     'VA',
+                     '',
+                     vendor['geo']['coordinates'][0],
+                     vendor['geo']['coordinates'][0],
+                     ''])
+            for inspection in vendor['inspections']:
+                inspections.append([str(vendor['_id']),
+                                    '',
+                                    inspection['date'],
+                                    '',
+                                    inspections['type']])
+                for violation in inspection['violations']:
+                    violations.append([str(vendor['_id']),
+                                       inspection['date'],
+                                       violation['code'][0],
+                                       violation['observation']])
+    businesses_csv.writerows(vendors)
+    inspections_csv.writerows(inspections)
+    violations_csv.writerows(violations)
 
 
 if __name__ == '__main__':
