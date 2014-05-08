@@ -36,11 +36,11 @@ def great_circle(lon1, lat1, lon2, lat2):
     Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
     """
-    # convert decimal degrees to radians
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
     # great circle formula
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
+    dlon = radians(lon2 - lon1)
+    print dlon
+    dlat = radians(lat2 - lat1)
+    print dlat
     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     # radius of earth in meters
@@ -60,86 +60,42 @@ def api_root():
 @app.route('/vendors')
 @support_jsonp
 def api_vendors():
-    data = db.va.find({}, {'name': 1,
-                           'address': 1,
-                           'type': 1,
-                           'geo.coordinates': 1})
-    if data.count() == 0:
-        resp = json.dumps({'status': '204', 'message': 'no results returned'})
-    else:
-        vendor_list = {}
-        for item in data:
-            url = url_for('api_vendor', vendorid=str(item['_id']))
-            vendor_list[str(item['_id'])] = {'url': url,
-                                             'name': item['name'],
-                                             'address': item['address'],
-                                             'type': item['type'],
-                                             'coordinates': {
-                                                 'latitude': item['geo']['coordinates'][0],
-                                                 'longitude': item['geo']['coordinates'][1]}}
-        resp = json.dumps(vendor_list)
-    return resp
 
-
-@app.route('/vendors/textsearch/<searchstring>')
-@support_jsonp
-def api_vendor_text_search(searchstring):
-    regex = re.compile(re.escape(searchstring), re.IGNORECASE)
-    data = db.va.find({'$or':
-                            [{'name': regex},
-                             {'address': regex},
-                             {'city': regex}]},
-                      {'name': 1,
-                       'address': 1,
-                       'type': 1,
-                       'geo.coordinates': 1})
-    if data.count() == 0:
-        resp = json.dumps({'status': '204', 'message': 'no results returned'})
-    else:
-        vendor_list = {}
-        for item in data:
-            url = url_for('api_vendor', vendorid=item['_id'])
-            vendor_list[str(item['_id'])] = {'url': url,
-                                             'name': item['name'],
-                                             'address': item['address'],
-                                             'type': item['type'],
-                                             'coordinates': {
-                                                 'latitude': item['geo']['coordinates'][0],
-                                                 'longitude': item['geo']['coordinates'][1]}}
-        resp = json.dumps(vendor_list)
-    return resp
-
-
-@app.route('/vendors/geosearch/<lat>/<lng>/<dist>')
-@support_jsonp
-def api_vendor_geo_search(lng, lat, dist):
-    data = db.va.find({'geo':
+    query = {}
+    if request.args.get('name') is not None:
+        query.update({'name': re.compile(re.escape(request.args.get('name')), re.IGNORECASE)})
+    if request.args.get('address') is not None:
+        query.update({'address': re.compile(re.escape(request.args.get('address')), re.IGNORECASE)})
+    if request.args.get('city') is not None:
+        query.update({'city': re.compile(re.escape(request.args.get('city')), re.IGNORECASE)})
+    if request.args.get('lat'):
+        query.update({'geo':
                            {'$nearSphere':
                                 {'$geometry':
                                      {'type': "Point",
-                                      'coordinates': [ float(lat), float(lng)]},
-                                 '$maxDistance': int(dist)}}},
+                                      'coordinates': [ float(request.args.get('lng')), float(request.args.get('lat'))]},
+                                 '$maxDistance': int(request.args.get('dist'))}}})
+    data = db.va.find(query,
                       {'name': 1,
                        'address': 1,
                        'type': 1,
-                       'geo.coordinates': 1})
+                       'geo.coordinates': 1}).limit(1500)
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
     else:
-        vendors = {}
+        vendor_list = {}
         for item in data:
             url = url_for('api_vendor', vendorid=str(item['_id']))
-            distance = great_circle(float(lng), float(lat), item['geo']['coordinates'][1], item['geo']['coordinates'][0])
-            vendors[str(item['_id'])] = {'url': url,
-                                         'name': item['name'],
-                                         'address': item['address'],
-                                         'type': item['type'],
-                                         'coordinates': {
-                                                 'latitude': item['geo']['coordinates'][0],
-                                                 'longitude': item['geo']['coordinates'][1]},
-                                         'dist': round(distance, 2)}
-
-        resp = json.dumps(vendors)
+            vendor_list[str(item['_id'])] = {'url': url,
+                                             'name': item['name'],
+                                             'address': item['address'],
+                                             'type': item['type'],
+                                             'coordinates': {
+                                                 'latitude': item['geo']['coordinates'][1],
+                                                 'longitude': item['geo']['coordinates'][0]}}
+            if request.args.get('lat') is not None:
+                vendor_list[str(item['_id'])]['dist'] = round(great_circle(float(request.args.get('lng')), float(request.args.get('lat')), item['geo']['coordinates'][0], item['geo']['coordinates'][1]), 2)
+        resp = json.dumps(vendor_list)
     return resp
 
 
