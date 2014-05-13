@@ -68,7 +68,7 @@ def api_vendors():
         query.update({'address': re.compile(re.escape(request.args.get('address')), re.IGNORECASE)})
     if request.args.get('city') is not None:
         query.update({'city': re.compile(re.escape(request.args.get('city')), re.IGNORECASE)})
-    if request.args.get('lat'):
+    if request.args.get('lat') is not None:
         query.update({'geo':
                            {'$nearSphere':
                                 {'$geometry':
@@ -85,16 +85,20 @@ def api_vendors():
     else:
         vendor_list = {}
         for item in data:
+            print item
             url = url_for('api_vendor', vendorid=str(item['_id']))
             vendor_list[str(item['_id'])] = {'url': url,
                                              'name': item['name'],
                                              'address': item['address'],
-                                             'type': item['type'],
-                                             'coordinates': {
-                                                 'latitude': item['geo']['coordinates'][1],
-                                                 'longitude': item['geo']['coordinates'][0]}}
+                                             'type': item['type']}
+            if 'geo' in item:
+                vendor_list[str(item['_id'])]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
+                                                                'longitude': item['geo']['coordinates'][0]}
             if request.args.get('lat') is not None:
-                vendor_list[str(item['_id'])]['dist'] = round(great_circle(float(request.args.get('lng')), float(request.args.get('lat')), item['geo']['coordinates'][0], item['geo']['coordinates'][1]), 2)
+                vendor_list[str(item['_id'])]['dist'] = round(great_circle(float(request.args.get('lng')),
+                                                                           float(request.args.get('lat')),
+                                                                           item['geo']['coordinates'][0],
+                                                                           item['geo']['coordinates'][1]), 2)
         resp = json.dumps(vendor_list)
     return resp
 
