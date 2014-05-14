@@ -23,6 +23,9 @@ Can be searched by adding any or all of the following parameters:
 <li>name<br />ex. <a href="http://api.ttavenner.com/vendors?name=Havana">api.ttavenner.com/vendors?name=Havana</a></li>
 <li>address<br />ex. <a href="http://api.ttavenner.com/vendors?address=Newtown%20Rd">api.ttavenner.com/vendors?address=Newtown%20Rd</a></li>
 <li>city<br />ex. <a href="http://api.ttavenner.com/vendors?city=Richmond">api.ttavenner.com/vendors?city=Richmond</a></li>
+<li>locality<br />ex. <a href="http://api.ttavenner.com/vendors?locality=Arlington">api.ttavenner.com/vendors?city=Arlington</a></li>
+<li>limit<br />Sets a limit on the number of results returned. The default is 1,500.</li>
+<li>pretty<br />Pretty prints the results. values are 'true' and 'false'. Default is false.</li>
 <li>Geospatial: Vendors near to a certain point can be found by providing a starting latitude &lt;lat&gt;, longitude &lt;lng&gt;, and distance in meters &lt;dist&gt;
 <br />ex. <a href="http://api.ttavenner.com/vendors?lat=36&lng=-76&dist=200">api.ttavenner.com/vendors?lat=36&lng=-76&dist=200</a></li>
 </ul>

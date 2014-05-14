@@ -7,6 +7,7 @@ from math import radians, cos, sin, atan2, sqrt
 from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
+from collections import OrderedDict
 
 
 app = Flask(__name__)
@@ -38,9 +39,7 @@ def great_circle(lon1, lat1, lon2, lat2):
     """
     # great circle formula
     dlon = radians(lon2 - lon1)
-    print dlon
     dlat = radians(lat2 - lat1)
-    print dlat
     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     # radius of earth in meters
@@ -61,13 +60,20 @@ def api_root():
 @support_jsonp
 def api_vendors():
 
+    limit = 1500
     query = {}
+
+    if request.args.get('limit') is not None:
+        limit = int(request.args.get('limit'))
+
     if request.args.get('name') is not None:
         query.update({'name': re.compile(re.escape(request.args.get('name')), re.IGNORECASE)})
     if request.args.get('address') is not None:
         query.update({'address': re.compile(re.escape(request.args.get('address')), re.IGNORECASE)})
     if request.args.get('city') is not None:
         query.update({'city': re.compile(re.escape(request.args.get('city')), re.IGNORECASE)})
+    if request.args.get('locality') is not None:
+        query.update({'locality': re.compile(re.escape(request.args.get('locality')), re.IGNORECASE)})
     if request.args.get('lat') is not None:
         query.update({'geo':
                            {'$nearSphere':
@@ -79,18 +85,17 @@ def api_vendors():
                       {'name': 1,
                        'address': 1,
                        'type': 1,
-                       'geo.coordinates': 1}).limit(1500)
+                       'geo.coordinates': 1}).limit(limit)
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
     else:
-        vendor_list = {}
+        vendor_list = OrderedDict()
         for item in data:
-            print item
             url = url_for('api_vendor', vendorid=str(item['_id']))
-            vendor_list[str(item['_id'])] = {'url': url,
+            vendor_list[str(item['_id'])] = OrderedDict({'url': url,
                                              'name': item['name'],
                                              'address': item['address'],
-                                             'type': item['type']}
+                                             'type': item['type']})
             if 'geo' in item:
                 vendor_list[str(item['_id'])]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
                                                                 'longitude': item['geo']['coordinates'][0]}
@@ -99,7 +104,12 @@ def api_vendors():
                                                                            float(request.args.get('lat')),
                                                                            item['geo']['coordinates'][0],
                                                                            item['geo']['coordinates'][1]), 2)
-        resp = json.dumps(vendor_list)
+        print vendor_list
+
+        if request.args.get('pretty') == 'true':
+            resp = json.dumps(vendor_list, indent=4)
+        else:
+            resp = json.dumps(vendor_list)
     return resp
 
 
