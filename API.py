@@ -1,6 +1,7 @@
 import mongolab
 import json
 import re
+
 #import csv
 #import zipfile
 from math import radians, cos, sin, atan2, sqrt
@@ -8,6 +9,7 @@ from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
 from collections import OrderedDict
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -127,8 +129,8 @@ def api_vendor(vendorid):
         vendor = {str(item['_id']): {'name': item['name'],
                                      'address': item['address'],
                                      'type': item['type'],
-                                     'last_inspection_date': inspection['date'],
-                                     'violations': inspection["violations"],
+                                     'last_inspection_date': inspection['date'].strftime('%d-%b-%Y'),
+                                     'violations': inspection['violations'],
                                      'coordinates': {
                                                  'latitude': item['geo']['coordinates'][0],
                                                  'longitude': item['geo']['coordinates'][1]}}}
@@ -153,7 +155,7 @@ def api_inspections(vendorid):
         vendor = {str(data[0]["_id"]): {'name': data[0]['name'],
                                         'address': data[0]['address'],
                                         'type': data[0]['type'],
-                                        'last_inspection_date': data[0]['last_inspection_date'],
+                                        'last_inspection_date': data[0]['last_inspection_date'].strftime('%d-%b-%Y'),
                                         'inspections': data[0]['inspections'],
                                         'coordinates': {
                                                  'latitude': data[0]['geo']['coordinates'][0],
@@ -195,12 +197,12 @@ def api_lives():
             for inspection in vendor['inspections']:
                 inspections.append([str(vendor['_id']),
                                     '',
-                                    inspection['date'],
+                                    inspection['date'].strftime('%d-%b-%Y'),
                                     '',
                                     inspections['type']])
                 for violation in inspection['violations']:
                     violations.append([str(vendor['_id']),
-                                       inspection['date'],
+                                       inspection['date'].strftime('%d-%b-%Y'),
                                        violation['code'][0],
                                        violation['observation']])
     businesses_csv.writerows(vendors)
