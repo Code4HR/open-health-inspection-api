@@ -1,2 +1,13 @@
 venv
 *.pyc
+
+# Config
+config.json
+
+# IDE Artifacts
+.idea/
+open-health-inspection-api.iml
+
+# Data Files
+livesData/
+

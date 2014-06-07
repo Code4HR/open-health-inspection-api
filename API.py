@@ -1,14 +1,16 @@
 import mongolab
 import json
 import re
-#import csv
-#import zipfile
+# import zipfile
 from math import radians, cos, sin, atan2, sqrt
 from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
 from collections import OrderedDict
 from datetime import datetime
+from threading import Thread
+
+from lives import Lives
 
 
 app = Flask(__name__)
@@ -186,45 +188,21 @@ def api_inspections():
     return resp
 
 
-@app.route('/lives')
-def api_lives():
-    data = db.va.find({}, {'name': 1,
-                           'address': 1,
-                           'city': 1,
-                           'geo': 1,
-                           'inspections': 1})
+@app.route("/lives/<locality>")
+def api_lives(locality):
+    l = Lives(db, locality)
 
-    businesses_csv = open('businesses.csv', 'wb')
-    inspections_csv = open('inspections.csv', 'wb')
-    violations_csv = open('violations.csv', 'wb')
-    with zipfile.ZipFile('lives.zip', 'w') as lives_zip:
-        vendors = []
-        inspections = []
-        violations = []
-        for vendor in data:
-            vendors.append([str(vendor["_id"]),
-                      vendor['_id'],
-                      vendor['_id'],
-                      vendor['_id'],
-                     'VA',
-                     '',
-                     vendor['geo']['coordinates'][0],
-                     vendor['geo']['coordinates'][0],
-                     ''])
-            for inspection in vendor['inspections']:
-                inspections.append([str(vendor['_id']),
-                                    '',
-                                    inspection['date'].strftime('%d-%b-%Y'),
-                                    '',
-                                    inspections['type']])
-                for violation in inspection['violations']:
-                    violations.append([str(vendor['_id']),
-                                       inspection['date'].strftime('%d-%b-%Y'),
-                                       violation['code'][0],
-                                       violation['observation']])
-    businesses_csv.writerows(vendors)
-    inspections_csv.writerows(inspections)
-    violations_csv.writerows(violations)
+    if not l.has_results():
+        return json.dumps({"status": "400", "message": "Couldn't find requested locality " + locality})
+
+    md = l.get_status()
+    if l.is_stale(md):
+        t = Thread(target=l.write_file)
+        t.start()
+
+
+    return json.dumps(md)
+
 
 
 if __name__ == '__main__':
