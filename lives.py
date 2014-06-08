@@ -1,11 +1,10 @@
-import mongolab
 import json
 import os
-import time
 import datetime
 from dateutil import parser
-import sys
 import csv
+import zipfile
+
 
 class Lives:
 
@@ -14,37 +13,24 @@ class Lives:
     def __init__(self, db, locality):
         self.db = db
         self.locality = locality
-        self.tmpDir = self.dataDir + "/tmp"
-        self.metadataFile = "livesData/" + self.locality + ".json"
+        self.tmp_dir = self.dataDir + "/tmp"
+        self.metadata_file = "livesData/" + self.locality + ".json"
         self.data = self.db.va.find({"locality": locality})
 
         if not os.path.exists(self.dataDir):
             os.makedirs(self.dataDir)
-            os.makedirs(self.tmpDir)
+            os.makedirs(self.tmp_dir)
 
+        self.metadata = self.__fetch_metadata()
+
+    @property
     def has_results(self):
         return self.data.count() > 0
 
-    def get_status(self):
+    @property
+    def is_stale(self):
         try:
-            with open(self.metadataFile, "r") as file:
-                metadata = json.load(file)
-        except IOError:
-            metadata = {
-                    "path" : "lives-file/" + self.locality,
-                    "available" : False
-            }
-            self.write_metadata(metadata)
-
-        return metadata
-
-    def write_metadata(self, metadata):
-        with open(self.metadataFile, "w") as file:
-            json.dump(metadata, file)
-
-    def is_stale(self, metadata):
-        try:
-            last_written = parser.parse(metadata['last_written'])
+            last_written = parser.parse(self.metadata['last_written'])
             delta = datetime.datetime.utcnow() - last_written
             stale_delta = datetime.timedelta(days=1)
             if delta > stale_delta:
@@ -52,10 +38,43 @@ class Lives:
             else:
                 return False
         except (KeyError, ValueError):
-            print True
+            # if last_written isn't set, it's stale
+            return True
+
+    def __fetch_metadata(self):
+        try:
+            with open(self.metadata_file, "r") as file:
+                metadata = json.load(file)
+        except IOError:
+            # couldn't read it, so write it
+            metadata = dict(path="lives-file/" + self.locality, available=False)
+            self.__update_metadata(metadata)
+
+        return metadata
+
+    def __update_metadata(self, metadata):
+        with open(self.metadata_file, "w") as file:
+            json.dump(metadata, file)
+
+    @property
+    def is_writing(self):
+        try:
+            status = self.metadata['status']
+        except KeyError:
+            status = None
+
+        return status == "writing"
+
+    def set_write_lock(self):
+        self.metadata['status'] = "writing"
+        self.__update_metadata(self.metadata)
 
     def write_file(self):
-        with open(self.tmpDir + "/businesses.csv", "w") as businesses_csv, open(self.tmpDir + "/inspections.csv", "w") as inspections_csv:
+        businesses_path = self.tmp_dir + "/" + self.locality + "_businesses.csv"
+        inspections_path = self.tmp_dir + "/" + self.locality + "_inspections.csv"
+
+        with open(businesses_path, "w") as businesses_csv, \
+                open(inspections_path, "w") as inspections_csv:
             b_writer = csv.writer(businesses_csv)
             i_writer = csv.writer(inspections_csv)
             for vendor in self.data:
@@ -68,8 +87,16 @@ class Lives:
                     i_writer.writerow([vendor["_id"],
                                        inspection["date"].strftime("%Y%m%d")])
 
-        print "written"
+        with zipfile.ZipFile(self.dataDir + "/" + self.locality + ".zip", 'w') as zip:
+            zip.write(businesses_path, self.locality + "/businesses.csv")
+            zip.write(inspections_path, self.locality + "/inspections.csv")
 
+        os.remove(businesses_path)
+        os.remove(inspections_path)
 
+        self.metadata["status"] = "complete"
+        self.metadata["last_written"] = datetime.datetime.utcnow().strftime("%c")
+        self.metadata["available"] = True
+        self.__update_metadata(self.metadata)
 
-
+        print "Done writing " + self.locality + ".zip"

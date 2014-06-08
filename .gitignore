@@ -7,7 +7,7 @@ config.json
 # IDE Artifacts
 .idea/
 open-health-inspection-api.iml
+.DS_Store
 
 # Data Files
 livesData/
-

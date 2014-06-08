@@ -1,7 +1,6 @@
 import mongolab
 import json
 import re
-# import zipfile
 from math import radians, cos, sin, atan2, sqrt
 from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
@@ -192,16 +191,18 @@ def api_inspections():
 def api_lives(locality):
     l = Lives(db, locality)
 
-    if not l.has_results():
+    if not l.has_results:
         return json.dumps({"status": "400", "message": "Couldn't find requested locality " + locality})
 
-    md = l.get_status()
-    if l.is_stale(md):
-        t = Thread(target=l.write_file)
-        t.start()
+    if l.is_stale:
+        if l.is_writing:
+            print "File is already writing!"
+        else:
+            l.set_write_lock()
+            t = Thread(target=l.write_file)
+            t.start()
 
-
-    return json.dumps(md)
+    return json.dumps(l.metadata)
 
 
 
