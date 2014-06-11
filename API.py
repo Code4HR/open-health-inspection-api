@@ -205,6 +205,14 @@ def api_lives(locality):
     return json.dumps(l.metadata)
 
 
+@app.route("/lives-file/<locality>.zip")
+def api_lives_file(locality):
+    try:
+        with open(Lives.dataDir + "/" + locality + ".zip", "r") as lives_file:
+            return Response(lives_file.read(), mimetype="application/octet-stream")
+    except IOError as e:
+        return json.dumps({"status": "400", "message": "Couldn't find requested locality " + locality})
+
 
 if __name__ == '__main__':
     app.run()

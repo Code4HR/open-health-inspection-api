@@ -13,12 +13,12 @@ class Lives:
     def __init__(self, db, locality):
         self.db = db
         self.locality = locality
-        self.tmp_dir = self.dataDir + "/tmp"
-        self.metadata_file = "livesData/" + self.locality + ".json"
+        self.tmp_dir = Lives.dataDir + "/tmp"
+        self.metadata_file = Lives.dataDir + "/" + self.locality + ".json"
         self.data = self.db.va.find({"locality": locality})
 
-        if not os.path.exists(self.dataDir):
-            os.makedirs(self.dataDir)
+        if not os.path.exists(Lives.dataDir):
+            os.makedirs(Lives.dataDir)
             os.makedirs(self.tmp_dir)
 
         self.metadata = self.__fetch_metadata()
@@ -87,7 +87,7 @@ class Lives:
                     i_writer.writerow([vendor["_id"],
                                        inspection["date"].strftime("%Y%m%d")])
 
-        with zipfile.ZipFile(self.dataDir + "/" + self.locality + ".zip", 'w') as zip:
+        with zipfile.ZipFile(Lives.dataDir + "/" + self.locality + ".zip", 'w') as zip:
             zip.write(businesses_path, self.locality + "/businesses.csv")
             zip.write(inspections_path, self.locality + "/inspections.csv")
 
