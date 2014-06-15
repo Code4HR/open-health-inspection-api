@@ -8,23 +8,30 @@ import shutil
 
 class LivesDataExporterTestCase(unittest.TestCase):
     def setUp(self):
-        test_data_dir = os.path.join(os.path.dirname(__file__), "testLivesData")
+        self.test_data_dir = os.path.join(os.path.dirname(__file__), "testLivesData")
 
         try:
             print "cleaning out export dir"
-            shutil.rmtree(test_data_dir)
+            shutil.rmtree(self.test_data_dir)
         except OSError:
             print "nothing to clean out"
 
-        collection = mongolab.connect().va
-        self.lives = LivesDataExporter(collection, 'Norfolk', test_data_dir)
+        self.collection = mongolab.connect().va
+        self.lives = LivesDataExporter(self.collection, 'Norfolk', self.test_data_dir)
+
+
+class CapitalizesLocality(LivesDataExporterTestCase):
+    def runTest(self):
+        vbLives = LivesDataExporter(self.collection, 'virginia beach', self.test_data_dir)
+        md = vbLives.metadata
+        self.assertEqual(md["locality"], "Virginia Beach")
 
 
 class Metadata(LivesDataExporterTestCase):
     def runTest(self):
         md = self.lives.metadata
         self.assertIsInstance(md, dict)
-        self.assertEqual(md["path"], "lives-file/Norfolk")
+        self.assertEqual(md["path"], "lives-file/Norfolk.zip")
         self.assertEqual(md["available"], False)
 
 
@@ -32,6 +39,12 @@ class HasResults(LivesDataExporterTestCase):
     def runTest(self):
         has_results = self.lives.has_results
         self.assertTrue(has_results)
+
+
+class AvailableLocalities(LivesDataExporterTestCase):
+    def runTest(self):
+        available = self.lives.available_localities
+        self.assertIsInstance(available, list)
 
 
 class IsStale(LivesDataExporterTestCase):

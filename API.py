@@ -195,7 +195,9 @@ def api_lives(locality):
     l = LivesDataExporter(db.va, locality)
 
     if not l.has_results:
-        return json.dumps({"message": "Couldn't find requested locality: " + locality}), 404
+        return json.dumps(
+            dict(message="Couldn't find requested locality: " + locality,
+                 available=l.available_localities)), 404
 
     if l.is_stale:
         if l.is_writing:
@@ -216,7 +218,7 @@ def api_lives_file(locality):
         with open(os.path.join(os.path.dirname(__file__), "livesData", locality + ".zip"), "r") as lives_file:
             return Response(lives_file.read(), mimetype="application/octet-stream"), 200
     except IOError:
-        return json.dumps({"message": "File " + locality + ".zip is not available. Please see /lives/" + locality}), \
+        return json.dumps(dict(message="File " + locality + ".zip is not available. Please see /lives/" + locality)), \
                404
 
 

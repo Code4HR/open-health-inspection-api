@@ -17,20 +17,19 @@ class LivesDataExporter:
         :param data_dir: str
         """
         self.collection = collection
-        self.locality = locality
+        self.locality = locality.title()
+        self.locality_file_name = self.locality.replace(" ", "_")
         self.data_dir = data_dir
-        self.archive_file = os.path.join(data_dir, self.locality + ".zip")
+        self.archive_file = os.path.join(data_dir, self.locality_file_name + ".zip")
 
         self.tmp_dir = os.path.join(data_dir, "tmp")
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
             os.makedirs(self.tmp_dir)
 
-        self.metadata_file = os.path.join(data_dir, self.locality + ".json")
+        self.metadata_file = os.path.join(data_dir, self.locality_file_name + ".json")
         self.metadata = None
         self.__load_metadata()
-
-        self.results = None
 
     @property
     def data_dir(self):
@@ -46,13 +45,12 @@ class LivesDataExporter:
         """
         try:
             with open(self.metadata_file, "r") as metadata_file:
-                metadata = json.load(metadata_file)
+                self.metadata = json.load(metadata_file)
         except IOError:
-            # couldn't read it, so write it
-            metadata = dict(path="lives-file/" + self.locality + ".zip", available=False)
-            self.save_metadata()
+            self.metadata = dict(path="lives-file/" + self.locality_file_name + ".zip",
+                                 available=False,
+                                 locality=self.locality)
 
-        self.metadata = metadata
         return None
 
     @property
@@ -61,6 +59,17 @@ class LivesDataExporter:
         :rtype : bool
         """
         return self.collection.find_one({"locality": self.locality}) is not None
+
+    @property
+    def available_localities(self):
+        """get a list of available localities
+        :rtype : list
+        """
+        localities = []
+        for locality in self.collection.distinct("locality"):
+            localities.append(locality)
+
+        return localities
 
     @property
     def is_stale(self):
@@ -119,8 +128,8 @@ class LivesDataExporter:
         """write the exported data to filesystem
         :rtype : None
         """
-        businesses_path_tmp = os.path.join(self.tmp_dir, self.locality + "_businesses.csv")
-        inspections_path_tmp = os.path.join(self.tmp_dir, self.locality + "_inspections.csv")
+        businesses_path_tmp = os.path.join(self.tmp_dir, self.locality_file_name + "_businesses.csv")
+        inspections_path_tmp = os.path.join(self.tmp_dir, self.locality_file_name + "_inspections.csv")
         with open(businesses_path_tmp, "w") as businesses_csv, \
                 open(inspections_path_tmp, "w") as inspections_csv:
             b_writer = csv.writer(businesses_csv)
@@ -137,8 +146,8 @@ class LivesDataExporter:
                                        inspection["date"].strftime("%Y%m%d")])
 
         with zipfile.ZipFile(self.archive_file, "w") as zip_file:
-            zip_file.write(businesses_path_tmp, os.path.join(self.locality, "businesses.csv"))
-            zip_file.write(inspections_path_tmp, os.path.join(self.locality, "inspections.csv"))
+            zip_file.write(businesses_path_tmp, os.path.join(self.locality_file_name, "businesses.csv"))
+            zip_file.write(inspections_path_tmp, os.path.join(self.locality_file_name, "inspections.csv"))
 
         # delete tmp files
         os.remove(businesses_path_tmp)
@@ -150,7 +159,7 @@ class LivesDataExporter:
         self.metadata["available"] = True
         self.save_metadata()
 
-        print "Done writing " + self.locality + ".zip"
+        print "Done writing " + self.locality_file_name + ".zip"
         return None
 
     @staticmethod
