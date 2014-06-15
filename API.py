@@ -9,7 +9,7 @@ from collections import OrderedDict
 from datetime import datetime
 from threading import Thread
 
-from lives import Lives
+from livesdataexporter import LivesDataExporter
 
 
 app = Flask(__name__)
@@ -189,10 +189,11 @@ def api_inspections():
 
 @app.route("/lives/<locality>")
 def api_lives(locality):
-    l = Lives(db, locality)
+    """Request a lives file for given locality"""
+    l = LivesDataExporter(db.va, locality)
 
     if not l.has_results:
-        return json.dumps({"status": "400", "message": "Couldn't find requested locality " + locality})
+        return json.dumps({"message": "Couldn't find requested locality: " + locality}), 404
 
     if l.is_stale:
         if l.is_writing:
@@ -202,16 +203,18 @@ def api_lives(locality):
             t = Thread(target=l.write_file)
             t.start()
 
-    return json.dumps(l.metadata)
+    return json.dumps(l.metadata), 200
 
 
 @app.route("/lives-file/<locality>.zip")
 def api_lives_file(locality):
+    """Retrieve lives file"""
     try:
-        with open(Lives.dataDir + "/" + locality + ".zip", "r") as lives_file:
-            return Response(lives_file.read(), mimetype="application/octet-stream")
-    except IOError as e:
-        return json.dumps({"status": "400", "message": "Couldn't find requested locality " + locality})
+        with open(LivesDataExporter.dataDir + "/" + locality + ".zip", "r") as lives_file:
+            return Response(lives_file.read(), mimetype="application/octet-stream"), 200
+    except IOError:
+        return json.dumps({"message": "File " + locality + ".zip is not available. Please see /lives/" + locality}), \
+               404
 
 
 if __name__ == '__main__':
