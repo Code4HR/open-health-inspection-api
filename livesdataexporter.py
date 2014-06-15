@@ -16,12 +16,10 @@ class LivesDataExporter:
         :param locality: str
         :param data_dir: str
         """
-        assert isinstance(collection, pymongo.collection.Collection)
         self.collection = collection
-        assert isinstance(locality, str)
         self.locality = locality
-        assert isinstance(data_dir, str)
         self.data_dir = data_dir
+        self.archive_file = os.path.join(data_dir, self.locality + ".zip")
 
         self.tmp_dir = os.path.join(data_dir, "tmp")
         if not os.path.exists(data_dir):
@@ -51,7 +49,7 @@ class LivesDataExporter:
                 metadata = json.load(metadata_file)
         except IOError:
             # couldn't read it, so write it
-            metadata = dict(path="lives-file/" + self.locality, available=False)
+            metadata = dict(path="lives-file/" + self.locality + ".zip", available=False)
             self.save_metadata()
 
         self.metadata = metadata
@@ -138,8 +136,7 @@ class LivesDataExporter:
                     i_writer.writerow([vendor["_id"],
                                        inspection["date"].strftime("%Y%m%d")])
 
-        zip_path = os.path.join(self.data_dir, self.locality + ".zip")
-        with zipfile.ZipFile(zip_path, 'w') as zip_file:
+        with zipfile.ZipFile(self.archive_file, "w") as zip_file:
             zip_file.write(businesses_path_tmp, os.path.join(self.locality, "businesses.csv"))
             zip_file.write(inspections_path_tmp, os.path.join(self.locality, "inspections.csv"))
 

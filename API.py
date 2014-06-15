@@ -8,6 +8,7 @@ from functools import wraps
 from collections import OrderedDict
 from datetime import datetime
 from threading import Thread
+import os
 
 from livesdataexporter import LivesDataExporter
 
@@ -189,7 +190,8 @@ def api_inspections():
 
 @app.route("/lives/<locality>")
 def api_lives(locality):
-    """Request a lives file for given locality"""
+    """Request a lives file for given locality
+    """
     l = LivesDataExporter(db.va, locality)
 
     if not l.has_results:
@@ -208,9 +210,10 @@ def api_lives(locality):
 
 @app.route("/lives-file/<locality>.zip")
 def api_lives_file(locality):
-    """Retrieve lives file"""
+    """Retrieve lives file
+    """
     try:
-        with open(LivesDataExporter.dataDir + "/" + locality + ".zip", "r") as lives_file:
+        with open(os.path.join(os.path.dirname(__file__), "livesData", locality + ".zip"), "r") as lives_file:
             return Response(lives_file.read(), mimetype="application/octet-stream"), 200
     except IOError:
         return json.dumps({"message": "File " + locality + ".zip is not available. Please see /lives/" + locality}), \
