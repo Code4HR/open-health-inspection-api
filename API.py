@@ -1,14 +1,16 @@
 import mongolab
 import json
 import re
-#import csv
-#import zipfile
 from math import radians, cos, sin, atan2, sqrt
 from bson.objectid import ObjectId
 from flask import Flask, Response, url_for, request, current_app
 from functools import wraps
 from collections import OrderedDict
 from datetime import datetime
+from threading import Thread
+import os
+
+from livesdataexporter import LivesDataExporter
 
 
 app = Flask(__name__)
@@ -186,45 +188,38 @@ def api_inspections():
     return resp
 
 
-@app.route('/lives')
-def api_lives():
-    data = db.va.find({}, {'name': 1,
-                           'address': 1,
-                           'city': 1,
-                           'geo': 1,
-                           'inspections': 1})
+@app.route("/lives/<locality>")
+def api_lives(locality):
+    """Request a lives file for given locality
+    """
+    l = LivesDataExporter(db.va, locality)
 
-    businesses_csv = open('businesses.csv', 'wb')
-    inspections_csv = open('inspections.csv', 'wb')
-    violations_csv = open('violations.csv', 'wb')
-    with zipfile.ZipFile('lives.zip', 'w') as lives_zip:
-        vendors = []
-        inspections = []
-        violations = []
-        for vendor in data:
-            vendors.append([str(vendor["_id"]),
-                      vendor['_id'],
-                      vendor['_id'],
-                      vendor['_id'],
-                     'VA',
-                     '',
-                     vendor['geo']['coordinates'][0],
-                     vendor['geo']['coordinates'][0],
-                     ''])
-            for inspection in vendor['inspections']:
-                inspections.append([str(vendor['_id']),
-                                    '',
-                                    inspection['date'].strftime('%d-%b-%Y'),
-                                    '',
-                                    inspections['type']])
-                for violation in inspection['violations']:
-                    violations.append([str(vendor['_id']),
-                                       inspection['date'].strftime('%d-%b-%Y'),
-                                       violation['code'][0],
-                                       violation['observation']])
-    businesses_csv.writerows(vendors)
-    inspections_csv.writerows(inspections)
-    violations_csv.writerows(violations)
+    if not l.has_results:
+        return json.dumps(
+            dict(message="Couldn't find requested locality: " + locality,
+                 available=l.available_localities)), 404
+
+    if l.is_stale:
+        if l.is_writing:
+            print "File is already writing!"
+        else:
+            l.set_write_lock()
+            t = Thread(target=l.write_file)
+            t.start()
+
+    return json.dumps(l.metadata), 200
+
+
+@app.route("/lives-file/<locality>.zip")
+def api_lives_file(locality):
+    """Retrieve lives file
+    """
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "livesData", locality + ".zip"), "r") as lives_file:
+            return Response(lives_file.read(), mimetype="application/octet-stream"), 200
+    except IOError:
+        return json.dumps(dict(message="File " + locality + ".zip is not available. Please see /lives/" + locality)), \
+               404
 
 
 if __name__ == '__main__':
