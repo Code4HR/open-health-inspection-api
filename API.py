@@ -166,8 +166,8 @@ def api_inspections():
         for item in data:
             inspections = OrderedDict()
             for inspection in item['inspections']:
-                inspections.update(OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y'),
-                                                'violations': inspection['violations']}))
+                inspections[len(inspections)] = OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y'),
+                                                             'violations': inspection['violations']})
 
             vendor_list[str(item["_id"])] = OrderedDict({'name': item['name'],
                                                          'address': item['address'],
@@ -188,7 +188,7 @@ def api_inspections():
     return resp
 
 
-@app.route("/lives/<locality>")
+@app.route('/lives/<locality>')
 def api_lives(locality):
     """Request a lives file for given locality
     """
