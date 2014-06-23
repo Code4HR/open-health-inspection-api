@@ -159,7 +159,7 @@ def api_inspections():
                               'address': 1,
                               'type': 1,
                               'last_inspection_date': 1,
-                              'inspections.$': 1,
+                              'inspections': 1,
                               'geo.coordinates': 1}).limit(limit)
     if data.count() > 0:
         vendor_list = OrderedDict()
