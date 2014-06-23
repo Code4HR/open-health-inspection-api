@@ -124,15 +124,19 @@ def api_vendor(vendorid):
                                                     'geo.coordinates': 1}).sort('inspection.date')
     if data.count() == 1:
         item = data[0]
-        inspection = item['inspections'][0]
+
         vendor = OrderedDict({str(item['_id']): {'name': item['name'],
-                                     'address': item['address'],
-                                     'type': item['type'],
-                                     'last_inspection_date': inspection['date'].strftime('%d-%b-%Y'),
-                                     'violations': inspection['violations'],
-                                     'coordinates': {
-                                                 'latitude': item['geo']['coordinates'][0],
-                                                 'longitude': item['geo']['coordinates'][1]}}})
+                                                 'address': item['address'],
+                                                 'type': item['type'],
+                                                 'coordinates': {
+                                                     'latitude': item['geo']['coordinates'][0],
+                                                     'longitude': item['geo']['coordinates'][1]}}})
+
+        if item['inspections']:
+            inspection = item['inspections'][0]
+            vendor[str(item['_id'])].update({'last_inspection_date': inspection['date'].strftime('%d-%b-%Y'),
+                                             'violations': inspection['violations']})
+
         resp = json.dumps(vendor)
     elif data.count() > 1:
         resp = json.dumps({'status': '300'})
@@ -164,17 +168,18 @@ def api_inspections():
     if data.count() > 0:
         vendor_list = OrderedDict()
         for item in data:
-            inspections = OrderedDict()
-            for inspection in item['inspections']:
-                inspections[len(inspections)] = OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y'),
-                                                             'violations': inspection['violations']})
+            if 'inspections' in item:
+                inspections = OrderedDict()
+                for inspection in item['inspections']:
+                    inspections[len(inspections)] = OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y'),
+                                                                 'violations': inspection['violations']})
 
             vendor_list[str(item["_id"])] = OrderedDict({'name': item['name'],
                                                          'address': item['address'],
                                                          'type': item['type']})
             if item['last_inspection_date'] is not None:
                 vendor_list[str(item['_id'])].update({'last_inspection_date': item['last_inspection_date'].strftime('%d-%b-%Y')})
-            if inspections is not None:
+            if inspections:
                 vendor_list[str(item['_id'])].update({'inspections': inspections})
             if 'geo' in item:
                 vendor_list[str(item['_id'])].update({'coordinates': { 'latitude': item['geo']['coordinates'][0],
