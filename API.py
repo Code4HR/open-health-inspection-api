@@ -129,8 +129,8 @@ def api_vendor(vendorid):
                                                  'address': item['address'],
                                                  'type': item['type'],
                                                  'coordinates': {
-                                                     'latitude': item['geo']['coordinates'][0],
-                                                     'longitude': item['geo']['coordinates'][1]}}})
+                                                     'latitude': item['geo']['coordinates'][1],
+                                                     'longitude': item['geo']['coordinates'][0]}}})
 
         if item['inspections']:
             inspection = item['inspections'][0]
@@ -182,8 +182,8 @@ def api_inspections():
             if inspections:
                 vendor_list[str(item['_id'])].update({'inspections': inspections})
             if 'geo' in item:
-                vendor_list[str(item['_id'])].update({'coordinates': { 'latitude': item['geo']['coordinates'][0],
-                                                                       'longitude': item['geo']['coordinates'][1]}})
+                vendor_list[str(item['_id'])].update({'coordinates': { 'latitude': item['geo']['coordinates'][1],
+                                                                       'longitude': item['geo']['coordinates'][0]}})
         if request.args.get('pretty') == 'true':
             resp = json.dumps(vendor_list, indent=4)
         else:
