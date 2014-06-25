@@ -188,9 +188,6 @@ def api_inspections():
             resp = json.dumps(vendor_list, indent=4)
         else:
             resp = json.dumps(vendor_list)
-    else:
-        resp = json.dumps({'status': '204'})
-    return resp
 
 
 @app.route('/lives/<locality>')
