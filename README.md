@@ -20,14 +20,14 @@ It can be implemented using Flask with [WSGI on Apache](http://flask.pocoo.org/d
 <td colspan=2>
 Can be searched by adding any or all of the following parameters:
 <ul>
-<li>name<br />ex. <a href="http://api-dev.openhealthinspection.com/vendors?name=Havana">api-dev.openhealthinspection.com/vendors?name=Havana</a></li>
-<li>address<br />ex. <a href="http://api-dev.openhealthinspection.com/vendors?address=Newtown%20Rd">api-dev.openhealthinspection.com/vendors?address=Newtown%20Rd</a></li>
-<li>city<br />ex. <a href="http://api-dev.openhealthinspection.com/vendors?city=Richmond">api-dev.openhealthinspection.com/vendors?city=Richmond</a></li>
-<li>locality<br />ex. <a href="http://api-dev.openhealthinspection.com/vendors?locality=Arlington">api-dev.openhealthinspection.com/vendors?locality=Arlington</a></li>
+<li>name<br />ex. <a href="http://api.openhealthinspection.com/vendors?name=Havana">api.openhealthinspection.com/vendors?name=Havana</a></li>
+<li>address<br />ex. <a href="http://api.openhealthinspection.com/vendors?address=Newtown%20Rd">api.openhealthinspection.com/vendors?address=Newtown%20Rd</a></li>
+<li>city<br />ex. <a href="http://api.openhealthinspection.com/vendors?city=Richmond">api.openhealthinspection.com/vendors?city=Richmond</a></li>
+<li>locality<br />ex. <a href="http://api.openhealthinspection.com/vendors?locality=Arlington">api.openhealthinspection.com/vendors?locality=Arlington</a></li>
 <li>limit<br />Sets a limit on the number of results returned. The default is 1,500.</li>
 <li>pretty<br />Pretty prints the results. values are 'true' and 'false'. Default is false.</li>
 <li>Geospatial: Vendors near to a certain point can be found by providing a starting latitude &lt;lat&gt;, longitude &lt;lng&gt;, and distance in meters &lt;dist&gt;
-<br />ex. <a href="http://api-dev.openhealthinspection.com/vendors?lat=36&lng=-76&dist=200">api-dev.openhealthinspection.com/vendors?lat=36&lng=-76&dist=200</a></li>
+<br />ex. <a href="http://api.openhealthinspection.com/vendors?lat=36&lng=-76&dist=200">api.openhealthinspection.com/vendors?lat=36&lng=-76&dist=200</a></li>
 </ul>
 This route returns name, API url, address, city, and coordinates for each vendor. If a geospatial search was performed it will also return the distance from the starting point.</td>
 </tr>
@@ -45,9 +45,9 @@ This route returns name, API url, address, city, and coordinates for each vendor
 <td colspan=2>
 Can be searched by adding any or all of the following parameters:
 <ul>
-<li>vendorid<br />ex. <a href="http://api-dev.openhealthinspection.com/inspections?vendorid=53532d309047231f00c6434f">api-dev.openhealthinspection.com/inspections?vendorid=53532d309047231f00c6434f</a></li>
-<li>vendorid<br />ex. <a href="http://api-dev.openhealthinspection.com/inspections?before=15-09-2013">api-dev.openhealthinspection.com/inspections?before=15-09-2013</a></li>
-<li>vendorid<br />ex. <a href="http://api-dev.openhealthinspection.com/inspections?after=29-02-2012">api-dev.openhealthinspection.com/inspections?after=29-02-2012</a></li>
+<li>vendorid<br />ex. <a href="http://api.openhealthinspection.com/inspections?vendorid=53532d309047231f00c6434f">api.openhealthinspection.com/inspections?vendorid=53532d309047231f00c6434f</a></li>
+<li>vendorid<br />ex. <a href="http://api.openhealthinspection.com/inspections?before=15-09-2013">api.openhealthinspection.com/inspections?before=15-09-2013</a></li>
+<li>vendorid<br />ex. <a href="http://api.openhealthinspection.com/inspections?after=29-02-2012">api.openhealthinspection.com/inspections?after=29-02-2012</a></li>
 </ul>
 </td>
 </tr>
