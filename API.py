@@ -137,7 +137,11 @@ def api_vendor(vendorid):
             vendor[str(item['_id'])].update({'last_inspection_date': inspection['date'].strftime('%d-%b-%Y'),
                                              'violations': inspection['violations']})
 
-        resp = json.dumps(vendor)
+        if request.args.get('pretty') == 'true':
+            resp = json.dumps(vendor, indent=4)
+        else:
+            resp = json.dumps(vendor)
+
     elif data.count() > 1:
         resp = json.dumps({'status': '300'})
     else:
@@ -152,18 +156,24 @@ def api_inspections():
     limit = 500
     query = {}
 
+    if request.args.get('limit') is not None:
+        limit = int(request.args.get('limit'))
     if request.args.get('vendorid') is not None:
         query.update({'_id': ObjectId(request.args.get('vendorid'))})
     if request.args.get('before') is not None:
-        query.update({'inspections.date': {'$lte': datetime.strptime(request.args.get('before'), '%d-%m-%Y')}})
+        query.update({'inspections': {'$elemMatch': {'date': {'$lte': datetime.strptime(request.args.get('before'), '%d-%m-%Y')}}}})
     if request.args.get('after') is not None:
-        query.update({'inspections.date': {'$gte': datetime.strptime(request.args.get('after'), '%d-%m-%Y')}})
-    print query
+        query.update({'inspections': {'$elemMatch': {'date': {'$gte': datetime.strptime(request.args.get('after'), '%d-%m-%Y')}}}})
+    if request.args.get('violation_text') is not None:
+        query.update({'inspections': {'$elemMatch': {'violations.observation': re.compile(re.escape(request.args.get('violation_text')), re.IGNORECASE)}}})
+    if request.args.get('violation_code') is not None:
+        query.update({'inspections': {'$elemMatch': {'violations.code': re.compile(re.escape(request.args.get('violation_code')), re.IGNORECASE)}}})
+
     data = db.va.find(query, {'name': 1,
                               'address': 1,
                               'type': 1,
                               'last_inspection_date': 1,
-                              'inspections': 1,
+                              'inspections.$.violations.$': 1,
                               'geo.coordinates': 1}).limit(limit)
     if data.count() > 0:
         vendor_list = OrderedDict()
@@ -188,6 +198,7 @@ def api_inspections():
             resp = json.dumps(vendor_list, indent=4)
         else:
             resp = json.dumps(vendor_list)
+    return resp
 
 
 @app.route('/lives/<locality>')
