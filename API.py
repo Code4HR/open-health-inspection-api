@@ -14,7 +14,7 @@ from livesdataexporter import LivesDataExporter
 
 
 app = Flask(__name__)
-#app.debug = True
+app.debug = True
 
 try:
     db = mongolab.connect()
@@ -220,14 +220,17 @@ def api_inspections():
                         continue
 
                     inspections[index] = OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y'),
-                                                                 'violations': {}})
+                                                                 'violations': []})
+                    print inspection['violations']
+
                     for violation in inspection['violations']:
+                        print violation
                         if request.args.get('violation_text') is not None and request.args.get('violation_text') in violation['observation']:
-                            inspections[index]['violations'].update(violation)
+                            inspections[index]['violations'].append(violation)
                         elif request.args.get('violation_code') is not None and request.args.get('violation_code') in violation['code']:
-                            inspections[index]['violations'].update(violation)
+                            inspections[index]['violations'].append(violation)
                         elif request.args.get('violation_text') is None and request.args.get('violation_code') is None:
-                            inspections[index]['violations'].update(violation)
+                            inspections[index]['violations'].append(violation)
 
             vendor_list[str(item["_id"])] = OrderedDict({'name': item['name'],
                                                          'address': item['address'],
