@@ -81,6 +81,11 @@ def api_vendors():
     if request.args.get('locality') is not None:
         query.update({'locality': re.compile(re.escape(request.args.get('locality')), re.IGNORECASE)})
     if request.args.get('lat') is not None:
+        if request.args.get('lng') is None or request.args.get('dist') is None:
+            resp = json.dumps({'status': '401',
+                               'error': 'For geospatial searches lat, lng, and dist are all required fields'})
+            return resp
+
         query.update({'geo':
                            {'$nearSphere':
                                 {'$geometry':
@@ -189,6 +194,10 @@ def api_inspections():
     if request.args.get('vendorid') is not None:
         query.update({'_id': ObjectId(request.args.get('vendorid'))})
     if request.args.get('before') is not None:
+        if request.args.get('after') is not None and datetime.strptime(request.args.get('after'), '%d-%m-%Y') > datetime.strptime(request.args.get('before'), '%d-%m-%Y'):
+            resp = json.dumps({'status': '401',
+                               'error': 'before date must be greater than after date'})
+            return resp
         query.update({'inspections': {'$elemMatch': {'date': {'$lte': datetime.strptime(request.args.get('before'), '%d-%m-%Y')}}}})
     if request.args.get('after') is not None:
         query.update({'inspections': {'$elemMatch': {'date': {'$gte': datetime.strptime(request.args.get('after'), '%d-%m-%Y')}}}})
