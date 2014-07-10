@@ -221,10 +221,8 @@ def api_inspections():
 
                     inspections[index] = OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y'),
                                                                  'violations': []})
-                    print inspection['violations']
 
                     for violation in inspection['violations']:
-                        print violation
                         if request.args.get('violation_text') is not None and request.args.get('violation_text') in violation['observation']:
                             inspections[index]['violations'].append(violation)
                         elif request.args.get('violation_code') is not None and request.args.get('violation_code') in violation['code']:
