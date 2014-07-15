@@ -1,0 +1,30 @@
+<!doctype html>
+<head>
+<title>Bulk Exports</title>
+</head>
+<body>
+<h2>Bulk Downloads of Virginia Health Inspection Data</h2>
+<table style='width: 30%;'>
+    <tr>
+        <th>File Name</th>
+        <th>File Size</th>
+        <th>File Creation Date</th>
+    </tr>
+{%- for item in tree %}
+    {%- if item -%}
+        <tr>
+            <td>
+                <a href="{{item.name}}">{{item.name}}</a>
+            </td>
+            <td>
+                {{item['size']}}
+            </td>
+            <td>
+                {{item.date}}
+            </td>
+        </tr>
+    {%- endif %}
+{%- endfor %}
+</table>
+</body>
+</html>

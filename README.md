@@ -67,4 +67,10 @@ Can be searched by adding any or all of the following parameters:
 <tr>
 <td colspan=2>After a file is requested through /lives/, it will be available at this URL.</td>
 </tr>
+<tr>
+<td>/bulk/</td>
+</tr>
+<tr>
+<td colspan=2>Provides bulk downloads of all data in the inspection database. Currently the data is only provided in JSON files but other formats will likely be available in the future. The data is currently updated weekly following a run of the <a href="https://github.com/c4hrva/open-health-inspection-scraper">Scraper</a>. The files are produced using the mongoexport command line tool.</td>
+</tr>
 </table>
