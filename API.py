@@ -285,21 +285,32 @@ def api_lives_file(locality):
         return json.dumps(dict(message="File " + locality + ".zip is not available. Please see /lives/" + locality)), \
                404
 
-
 @app.route('/bulk/')
-def api_bulk_file():
+def show_bulk_list():
+    return api_bulk_file(None)
+
+@app.route('/bulk/<filename>')
+def api_bulk_file(filename):
     path = os.path.join(os.path.dirname(__file__), 'bulk')
-    files = os.listdir(path)
-    file_list = []
 
-    for item in files:
-        stats = os.stat(os.path.join(path, item))
+    print filename
 
-        file_list.append({'name': item,
-                          'size': '{:,}'.format(stats.st_size)+' bytes',
-                          'date': datetime.strftime(datetime.fromtimestamp(stats.st_mtime), '%b %d, %Y')})
+    if filename is None:
+        files = os.listdir(path)
+        file_list = []
 
-    return render_template('bulk_list.html', tree=file_list)
+        for item in files:
+            stats = os.stat(os.path.join(path, item))
+
+            file_list.append({'name': item,
+                              'size': '{:,}'.format(stats.st_size)+' bytes',
+                              'date': datetime.strftime(datetime.fromtimestamp(stats.st_mtime), '%b %d, %Y')})
+
+        return render_template('bulk_list.html', tree=file_list)
+
+    else:
+        with open(os.path.join(path, filename), "r") as bulk_file:
+            return Response(bulk_file.read(), mimetype="application/octet-stream"), 200
 
 if __name__ == '__main__':
     app.run()
