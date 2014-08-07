@@ -253,7 +253,8 @@ def api_inspections():
 
 
 @app.route('/lives/<locality>')
-def api_lives(locality):
+@app.route('/lives/')
+def api_lives(locality=""):
     """Request a lives file for given locality
     """
     l = LivesDataExporter(db.va, locality)
