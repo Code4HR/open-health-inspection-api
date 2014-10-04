@@ -14,7 +14,7 @@ from livesdataexporter import LivesDataExporter
 
 
 app = Flask(__name__)
-app.debug = True
+app.debug = False
 
 try:
     db = mongolab.connect()
@@ -65,6 +65,15 @@ def api_vendors():
 
     limit = 1500
     query = {}
+    output = {'name': 1,
+              'address': 1,
+              'city': 1,
+              'locality': 1,
+              'category': 1,
+              'type': 1,
+              'score': 1,
+              'slug': 1,
+              'geo.coordinates': 1}
 
     if request.args.get('limit') is not None:
         limit = int(request.args.get('limit'))
@@ -73,25 +82,29 @@ def api_vendors():
     if request.args.get('type') is not None:
         query.update({'type': re.compile(re.escape(request.args.get('type')), re.IGNORECASE)})
     if request.args.get('name') is not None:
-        query.update({'name': re.compile(re.escape(request.args.get('name')), re.IGNORECASE)})
+        query['name'] = re.compile(re.escape(request.args.get('name')), re.IGNORECASE)
     if request.args.get('address') is not None:
-        query.update({'address': re.compile(re.escape(request.args.get('address')), re.IGNORECASE)})
+        query['address'] = re.compile(re.escape(request.args.get('address')), re.IGNORECASE)
     if request.args.get('city') is not None:
-        query.update({'city': re.compile(re.escape(request.args.get('city')), re.IGNORECASE)})
+        query['city'] = re.compile(re.escape(request.args.get('city')), re.IGNORECASE)
     if request.args.get('locality') is not None:
-        query.update({'locality': re.compile(re.escape(request.args.get('locality')), re.IGNORECASE)})
+        query['locality'] = re.compile(re.escape(request.args.get('locality')), re.IGNORECASE)
+    if request.args.get('score_above') is not None:
+        query['score'] = {'$gt': int(request.args.get('score_above'))}
+    if request.args.get('score_below') is not None:
+        if 'score' in query:
+            query['score'].update({'$lt': int(request.args.get('score_below'))})
     if request.args.get('lat') is not None:
         if request.args.get('lng') is None or request.args.get('dist') is None:
             resp = json.dumps({'status': '401',
                                'error': 'For geospatial searches lat, lng, and dist are all required fields'})
             return resp
-
-        query.update({'geo':
-                           {'$nearSphere':
+        else:
+            query['geo'] = {'$nearSphere':
                                 {'$geometry':
                                      {'type': "Point",
                                       'coordinates': [ float(request.args.get('lng')), float(request.args.get('lat'))]},
-                                 '$maxDistance': int(request.args.get('dist'))}}})
+                                 '$maxDistance': int(request.args.get('dist'))}}
     data = db.va.find(query,
                       {'name': 1,
                        'address': 1,
@@ -99,29 +112,33 @@ def api_vendors():
                        'locality': 1,
                        'category': 1,
                        'type': 1,
+                       'score': 1,
+                       'slug': 1,
                        'geo.coordinates': 1}).limit(limit)
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
     else:
         vendor_list = OrderedDict()
         for item in data:
-            url = url_for('api_vendor', vendorid=str(item['_id']))
-            vendor_list[str(item['_id'])] = OrderedDict({'url': url,
-                                                         'name': item['name'],
-                                                         'address': item['address'],
-                                                         'city': item['city'],
-                                                         'locality': item['locality']})
+            url = url_for('api_vendor', vendorid=item['slug'])
+            vendor_list[str(item['slug'])] = OrderedDict({'url': url,
+                                                          'name': item['name'],
+                                                          'address': item['address'],
+                                                          'city': item['city'],
+                                                          'locality': item['locality'],
+                                                          'type': item['type']})
             if 'category' in item:
-                vendor_list[str(item['_id'])].update({'category': item['category'],
-                                                      'type': item['type']})
+                vendor_list[item['slug']]['category'] = item['category']
+            if 'score' in item:
+                vendor_list[item['slug']]['score'] = item['score']
             if 'geo' in item:
-                vendor_list[str(item['_id'])]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
-                                                                'longitude': item['geo']['coordinates'][0]}
+                vendor_list[item['slug']]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
+                                                            'longitude': item['geo']['coordinates'][0]}
             if request.args.get('lat') is not None:
-                vendor_list[str(item['_id'])]['dist'] = round(great_circle(float(request.args.get('lng')),
-                                                                           float(request.args.get('lat')),
-                                                                           item['geo']['coordinates'][0],
-                                                                           item['geo']['coordinates'][1]), 2)
+                vendor_list[item['slug']]['dist'] = round(great_circle(float(request.args.get('lng')),
+                                                                       float(request.args.get('lat')),
+                                                                       item['geo']['coordinates'][0],
+                                                                       item['geo']['coordinates'][1]), 2)
 
         if request.args.get('pretty') == 'true':
             resp = json.dumps(vendor_list, indent=4)
@@ -133,33 +150,35 @@ def api_vendors():
 @app.route('/vendor/<vendorid>')
 @support_jsonp
 def api_vendor(vendorid):
-    data = db.va.find({'_id': ObjectId(vendorid)}, {'name': 1,
-                                                    'address': 1,
-                                                    'locality': 1,
-                                                    'city': 1,
-                                                    'category': 1,
-                                                    'type': 1,
-                                                    'inspections.0': {'$slice': 1},
-                                                    'geo.coordinates': 1}).sort('inspection.date')
+    data = db.va.find({'slug': vendorid}, {'name': 1,
+                                           'address': 1,
+                                           'city': 1,
+                                           'locality': 1,
+                                           'type': 1,
+                                           'category': 1,
+                                           'slug': 1,
+                                           'score': 1,
+                                           'inspections.0': {'$slice': 1},
+                                           'geo.coordinates': 1}).sort('inspection.date')
     if data.count() == 1:
         item = data[0]
 
-        vendor = OrderedDict({str(item['_id']): {'name': item['name'],
-                                                 'address': item['address'],
-                                                 'locality': item['locality'],
-                                                 'city': item['city']}})
-
+        vendor = OrderedDict({item['slug']: {'name': item['name'],
+                                             'address': item['address'],
+                                             'city': item['city'],
+                                             'locality': item['locality'],
+                                             'type': item['type']}})
         if 'category' in item:
-            vendor[str(item['_id'])].update({'category': item['category'],
-                                             'type': item['type']})
+            vendor[item['slug']]['category'] = item['category']
+        if 'score' in item:
+            vendor[item['slug']]['score'] = item['score']
         if 'geo' in item:
-                vendor[str(item['_id'])].update({'coordinates': {'latitude': item['geo']['coordinates'][1],
-                                                                 'longitude': item['geo']['coordinates'][0]}})
-
-        if item['inspections']:
+            vendor[item['slug']]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
+                                                   'longitude': item['geo']['coordinates'][0]}
+        if 'inspections' in item:
             inspection = item['inspections'][0]
-            vendor[str(item['_id'])].update({'last_inspection_date': inspection['date'].strftime('%d-%b-%Y'),
-                                             'violations': inspection['violations']})
+            vendor[item['slug']].update({'last_inspection_date': inspection['date'].strftime('%d-%b-%Y'),
+                                         'violations': inspection['violations']})
 
         if request.args.get('pretty') == 'true':
             resp = json.dumps(vendor, indent=4)
@@ -179,12 +198,14 @@ def api_inspections():
 
     limit = 1500
     query = {}
-    output = {'name': 1,
+    output = {'slug': 1,
+              'name': 1,
               'address': 1,
               'city': 1,
               'locality': 1,
               'category': 1,
               'type': 1,
+              'score': 1,
               'last_inspection_date': 1,
               'inspections': 1,
               'geo.coordinates': 1}
@@ -192,23 +213,43 @@ def api_inspections():
     if request.args.get('limit') is not None:
         limit = int(request.args.get('limit'))
     if request.args.get('vendorid') is not None:
-        query.update({'_id': ObjectId(request.args.get('vendorid'))})
+        query['slug'] = request.args.get('vendorid')
     if request.args.get('before') is not None:
         if request.args.get('after') is not None and datetime.strptime(request.args.get('after'), '%d-%m-%Y') > datetime.strptime(request.args.get('before'), '%d-%m-%Y'):
             resp = json.dumps({'status': '401',
                                'error': 'before date must be greater than after date'})
             return resp
-        query.update({'inspections': {'$elemMatch': {'date': {'$lte': datetime.strptime(request.args.get('before'), '%d-%m-%Y')}}}})
+        query['inspections.date'] = {'$lte': datetime.strptime(request.args.get('before'),
+                                                               '%d-%m-%Y')}
     if request.args.get('after') is not None:
-        query.update({'inspections': {'$elemMatch': {'date': {'$gte': datetime.strptime(request.args.get('after'), '%d-%m-%Y')}}}})
+        if 'inspections.date' in query:
+            query['inspections.date'].update({'$gte': datetime.strptime(request.args.get('after'),
+                                                                        '%d-%m-%Y')})
+        else:
+            query['inspections.date'] = {'$gte': datetime.strptime(request.args.get('after'),
+                                                                   '%d-%m-%Y')}
+    if request.args.get('score_above') is not None:
+        query['inspections.score'] = {'$gt': int(request.args.get('score_above'))}
+    if request.args.get('score_below') is not None:
+        if 'inspections.score' in query:
+            query['inspections.score'].update({'$lt': int(request.args.get('score_below'))})
+        else:
+            query['inspections.score'] = {'$lt': int(request.args.get('score_below'))}
     if request.args.get('violation_text') is not None:
-        query.update({'inspections': {'$elemMatch': {'violations.observation': re.compile(re.escape(request.args.get('violation_text')), re.IGNORECASE)}}})
+        query['inspections.violations.observation'] = re.compile(re.escape(request.args.get('violation_text')),
+                                                                 re.IGNORECASE)
     if request.args.get('violation_code') is not None:
-        query.update({'inspections': {'$elemMatch': {'violations.code': re.compile(re.escape(request.args.get('violation_code')), re.IGNORECASE)}}})
+        query['inspections.violations.code'] = re.compile(re.escape(request.args.get('violation_code')),
+                                                          re.IGNORECASE)
+
+    score_below = 101 if request.args.get('score_below') is None else int(request.args.get('score_below'))
+    score_above = 0 if request.args.get('score_above') is None else int(request.args.get('score_above'))
 
     data = db.va.find(query, output).limit(limit)
 
-    if data.count() > 0:
+    if data.count() == 0:
+        resp = json.dumps({'Status': 204, 'Message': 'No results returned'})
+    else:
         vendor_list = OrderedDict()
         for item in data:
             if 'inspections' in item:
@@ -218,9 +259,17 @@ def api_inspections():
                         continue
                     if request.args.get('after') is not None and inspection['date'] < datetime.strptime(request.args.get('after'), '%d-%m-%Y'):
                         continue
+                    if request.args.get('score_above') is not None or request.args.get('score_below') is not None:
+                        if 'score' not in inspection:
+                            continue
+                        if not(score_below > int(inspection['score']) > score_above):
+                            continue
 
-                    inspections[index] = OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y'),
-                                                                 'violations': []})
+                    inspections[index] = OrderedDict({'date': inspection['date'].strftime('%d-%b-%Y')})
+                    if 'score' in inspection:
+                        inspections[index]['score'] = inspection['score']
+
+                    inspections[index]['violations'] = []
 
                     for violation in inspection['violations']:
                         if request.args.get('violation_text') is not None and request.args.get('violation_text') in violation['observation']:
@@ -230,21 +279,28 @@ def api_inspections():
                         elif request.args.get('violation_text') is None and request.args.get('violation_code') is None:
                             inspections[index]['violations'].append(violation)
 
-            vendor_list[str(item["_id"])] = OrderedDict({'name': item['name'],
-                                                         'address': item['address'],
-                                                         'city': item['city'],
-                                                         'locality': item['locality']})
+            if inspections is None:
+                continue
+
+            vendor_list[item['slug']] = OrderedDict({'name': item['name'],
+                                                     'address': item['address'],
+                                                     'city': item['city'],
+                                                     'locality': item['locality']})
 
             if 'category' in item:
-                vendor_list[str(item['_id'])].update({'category': item['category'],
-                                                      'type': item['type']})
-            if item['last_inspection_date'] is not None:
-                vendor_list[str(item['_id'])].update({'last_inspection_date': item['last_inspection_date'].strftime('%d-%b-%Y')})
-            if inspections:
-                vendor_list[str(item['_id'])].update({'inspections': inspections})
+                vendor_list[item['slug']].update({'category': item['category'],
+                                                  'type': item['type']})
+            if 'score' in item:
+                vendor_list[item['slug']]['score'] = item['score']
+
+            vendor_list[item['slug']].update({'last_inspection_date': item['last_inspection_date'].strftime('%d-%b-%Y'),
+                                              'inspections': inspections})
+
+            if 'score' in item:
+                vendor_list[item['slug']]['score'] = item['score']
             if 'geo' in item:
-                vendor_list[str(item['_id'])].update({'coordinates': { 'latitude': item['geo']['coordinates'][1],
-                                                                       'longitude': item['geo']['coordinates'][0]}})
+                vendor_list[item['slug']]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
+                                                            'longitude': item['geo']['coordinates'][0]}
         if request.args.get('pretty') == 'true':
             resp = json.dumps(vendor_list, indent=4)
         else:
