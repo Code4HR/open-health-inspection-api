@@ -21,7 +21,7 @@ It can be implemented using Flask with [WSGI on Apache/Nginx](http://flask.pocoo
 Can be searched by adding any or all of the following parameters:
 <ul>
 <li><b>Name</b><br />ex. <a href="http://api.openhealthinspection.com/vendors?name=Havana">api.openhealthinspection.com/vendors?name=Havana</a></li>
-<li><b>Address</b><br />ex. <a href="http://api.openhealthinspection.com/vendors?address=Newtown%20Rd">api.openhealthinspection.com/vendors?address=Newtown%20Rd</a></li>
+<li><b>Address</b><br />ex. <a href="http://api.openhealthinspection.com/vendors?address=Newtown%20Rd">api.openhealthinspection.com/vendors?address=Newtown Rd</a></li>
 <li><b>City</b><br />ex. <a href="http://api.openhealthinspection.com/vendors?city=Richmond">api.openhealthinspection.com/vendors?city=Richmond</a></li>
 <li><b>Locality</b>: The health district in which the vendor is located<br />ex. <a href="http://api.openhealthinspection.com/vendors?locality=Arlington%20Health%20District">api.openhealthinspection.com/vendors?locality=Arlington Health District</a></li>
 <li><b>Category</b>: A broad categorization<br />ex. <a href="http://api.openhealthinspection.com/vendors?category=Restaurant">api.openhealthinspection.com/vendors?category=Restaurant</a></li>
@@ -31,7 +31,7 @@ Can be searched by adding any or all of the following parameters:
 <li><b>Limit</b><br />Sets a limit on the number of results returned. The default is 1,500.</li>
 <li><b>Pretty</b><br />Formats the results for easier reading in a browser. values are 'true' and 'false'. Default is false.</li>
 <li><b>Geospatial</b>: Vendors near to a certain point can be found by providing a starting latitude &lt;lat&gt;, longitude &lt;lng&gt;, and distance in meters &lt;dist&gt;
-<br />ex. <a href="http://api.openhealthinspection.com/vendors?lat=36&lng=-76&dist=200">api.openhealthinspection.com/vendors?lat=36&lng=-76&dist=200</a></li>
+<br />ex. <a href="http://api.openhealthinspection.com/vendors?lat=36.6337272&lng=-81.7837303&dist=2000">api.openhealthinspection.com/vendors?lat=36.6337272&lng=-81.7837303&dist=2000</a></li>
 </ul>
 This route returns name, API url, address, city, locality, category, type, score, and coordinates for each vendor. If a geospatial search was performed it will also return the distance from the starting point.</td>
 </tr>
@@ -49,7 +49,7 @@ This route returns name, API url, address, city, locality, category, type, score
 <td colspan=2>
 Can be searched by adding any or all of the following parameters:
 <ul>
-<li><b>vendorid</b><br />ex. <a href="http://api.openhealthinspection.com/inspections?vendorid=53532d309047231f00c6434f">api.openhealthinspection.com/inspections?vendorid=53532d309047231f00c6434f</a></li>
+<li><b>vendorid</b><br />ex. <a href="http://api.openhealthinspection.com/inspections?vendorid=molasses-grill-63-south-main-street">api.openhealthinspection.com/inspections?vendorid=molasses-grill-63-south-main-street</a></li>
 <li><b>Inspections Performed Before Date</b>: Specified in the form DD-MM-YYYY<br />ex. <a href="http://api.openhealthinspection.com/inspections?before=15-09-2013">api.openhealthinspection.com/inspections?before=15-09-2013</a></li>
 <li><b>Inspections Performed After Date</b>: Specified in the form DD-MM-YYYY<br />ex. <a href="http://api.openhealthinspection.com/inspections?after=29-02-2012">api.openhealthinspection.com/inspections?after=29-02-2012</a></li>
 <li><b>Violation Text</b>: The inspector's description of the violation contains this text<br />ex. <a href="http://api.openhealthinspection.com/inspections?violation_text=candle">api.openhealthinspection.com/inspections?violation_text=candle</a></li>
