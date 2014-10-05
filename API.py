@@ -1,17 +1,15 @@
 import mongolab
 import json
+import os
 import re
 from math import radians, cos, sin, atan2, sqrt
-from bson.objectid import ObjectId
-from flask import Flask, Response, url_for, request, current_app, render_template
-from functools import wraps
 from collections import OrderedDict
 from datetime import datetime
-from threading import Thread
-import os
-
+from flask import Flask, Response, url_for, request, current_app, render_template
+from functools import wraps
 from livesdataexporter import LivesDataExporter
-
+from piwik import Tracker
+from threading import Thread
 
 app = Flask(__name__)
 app.debug = False
@@ -20,6 +18,13 @@ try:
     db = mongolab.connect()
 except ValueError:
     print "Could not connect to database"
+
+piwik = Tracker()
+
+@app.before_request
+def before_request():
+    if piwik:
+        piwik.track(request)
 
 
 def support_jsonp(f):
@@ -105,16 +110,9 @@ def api_vendors():
                                      {'type': "Point",
                                       'coordinates': [ float(request.args.get('lng')), float(request.args.get('lat'))]},
                                  '$maxDistance': int(request.args.get('dist'))}}
-    data = db.va.find(query,
-                      {'name': 1,
-                       'address': 1,
-                       'city': 1,
-                       'locality': 1,
-                       'category': 1,
-                       'type': 1,
-                       'score': 1,
-                       'slug': 1,
-                       'geo.coordinates': 1}).limit(limit)
+
+    data = db.va.find(query, output).limit(limit)
+    
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
     else:
