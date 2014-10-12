@@ -112,7 +112,7 @@ def api_vendors():
                                  '$maxDistance': int(request.args.get('dist'))}}
 
     data = db.va.find(query, output).limit(limit)
-    
+
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
     else:
@@ -291,8 +291,9 @@ def api_inspections():
             if 'score' in item:
                 vendor_list[item['slug']]['score'] = item['score']
 
-            vendor_list[item['slug']].update({'last_inspection_date': item['last_inspection_date'].strftime('%d-%b-%Y'),
-                                              'inspections': inspections})
+            if inspections:
+                vendor_list[item['slug']].update({'last_inspection_date': item['last_inspection_date'].strftime('%d-%b-%Y'),
+                                                  'inspections': inspections})
 
             if 'score' in item:
                 vendor_list[item['slug']]['score'] = item['score']
