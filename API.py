@@ -12,19 +12,19 @@ from piwik import Tracker
 from threading import Thread
 
 app = Flask(__name__)
-app.debug = False
+app.debug = True
 
 try:
     db = mongolab.connect()
 except ValueError:
     print "Could not connect to database"
 
-piwik = Tracker()
+#piwik = Tracker()
 
-@app.before_request
-def before_request():
-    if piwik:
-        piwik.track(request)
+#@app.before_request
+#def before_request():
+#    if piwik:
+#        piwik.track(request)
 
 
 def support_jsonp(f):
@@ -100,7 +100,7 @@ def api_vendors():
         if 'score' in query:
             query['score'].update({'$lt': int(request.args.get('score_below'))})
     if request.args.get('lat') is not None:
-        if request.args.get('lng') is None or request.args.get('dist') is None:
+        if request.args.get('lng') is None or (request.args.get('dist') is None and request.args.get('maxDist') is None):
             resp = json.dumps({'status': '401',
                                'error': 'For geospatial searches lat, lng, and dist are all required fields'})
             return resp
@@ -108,8 +108,13 @@ def api_vendors():
             query['geo'] = {'$nearSphere':
                                 {'$geometry':
                                      {'type': "Point",
-                                      'coordinates': [ float(request.args.get('lng')), float(request.args.get('lat'))]},
-                                 '$maxDistance': int(request.args.get('dist'))}}
+                                      'coordinates': [ float(request.args.get('lng')), float(request.args.get('lat'))]}}}
+            if request.args.get('dist') is not None or request.args.get('maxDist') is not None:
+                max_dist = int(request.args.get('dist')) if request.args.get('dist') is not None else int(request.args.get('maxDist'))
+                query['geo']['$nearSphere']['$maxDistance'] = max_dist
+
+            if request.args.get('minDist'):
+                query['geo']['$nearSphere']['$minDistance'] = int(request.args.get('minDist'))
 
     data = db.va.find(query, output).limit(limit)
 
