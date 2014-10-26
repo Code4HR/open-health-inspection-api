@@ -12,19 +12,19 @@ from piwik import Tracker
 from threading import Thread
 
 app = Flask(__name__)
-app.debug = True
+app.debug = False
 
 try:
     db = mongolab.connect()
 except ValueError:
     print "Could not connect to database"
 
-#piwik = Tracker()
+piwik = Tracker()
 
-#@app.before_request
-#def before_request():
-#    if piwik:
-#        piwik.track(request)
+@app.before_request
+def before_request():
+    if piwik:
+        piwik.track(request)
 
 
 def support_jsonp(f):
