@@ -87,7 +87,7 @@ def api_vendors():
     if request.args.get('type') is not None:
         query.update({'type': re.compile(re.escape(request.args.get('type')), re.IGNORECASE)})
     if request.args.get('name') is not None:
-        query['name'] = re.compile(re.escape(request.args.get('name')), re.IGNORECASE)
+        query['search_name'] = re.compile(re.escape(re.sub(r'[^\s\w]', '', request.args.get('name'))), re.IGNORECASE)
     if request.args.get('address') is not None:
         query['address'] = re.compile(re.escape(request.args.get('address')), re.IGNORECASE)
     if request.args.get('city') is not None:
