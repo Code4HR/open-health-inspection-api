@@ -178,7 +178,7 @@ def api_vendor(vendorid):
         if 'geo' in item:
             vendor[item['slug']]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
                                                    'longitude': item['geo']['coordinates'][0]}
-        if 'inspections' in item:
+        if 'inspections' in item and len(item['inspections']) > 0:
             inspection = item['inspections'][0]
             vendor[item['slug']].update({'last_inspection_date': inspection['date'].strftime('%d-%b-%Y'),
                                          'violations': inspection['violations']})
