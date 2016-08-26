@@ -274,13 +274,14 @@ def api_inspections():
 
                     inspections[index]['violations'] = []
 
-                    for violation in inspection['violations']:
-                        if request.args.get('violation_text') is not None and request.args.get('violation_text') in violation['observation']:
-                            inspections[index]['violations'].append(violation)
-                        elif request.args.get('violation_code') is not None and request.args.get('violation_code') in violation['code']:
-                            inspections[index]['violations'].append(violation)
-                        elif request.args.get('violation_text') is None and request.args.get('violation_code') is None:
-                            inspections[index]['violations'].append(violation)
+                    if 'violations' in inspection:
+                        for violation in inspection['violations']:
+                            if request.args.get('violation_text') is not None and request.args.get('violation_text') in violation['observation']:
+                                inspections[index]['violations'].append(violation)
+                            elif request.args.get('violation_code') is not None and request.args.get('violation_code') in violation['code']:
+                                inspections[index]['violations'].append(violation)
+                            elif request.args.get('violation_text') is None and request.args.get('violation_code') is None:
+                                inspections[index]['violations'].append(violation)
 
             if inspections is None:
                 continue
