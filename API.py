@@ -5,26 +5,19 @@ import re
 from math import radians, cos, sin, atan2, sqrt
 from collections import OrderedDict
 from datetime import datetime
-from flask import Flask, Response, url_for, request, current_app, render_template
+from flask import g, Flask, Response, url_for, request, current_app, render_template
 from functools import wraps
 from livesdataexporter import LivesDataExporter
-from piwik import Tracker
 from threading import Thread
 
 app = Flask(__name__)
 app.debug = False
 
-try:
-    db = mongolab.connect()
-except ValueError:
-    print "Could not connect to database"
-
-piwik = Tracker()
 
 @app.before_request
-def before_request():
-    if piwik:
-        piwik.track(request)
+def get_db():
+    if not hasattr(g, 'db'):
+        g.db = mongolab.connect()
 
 
 def support_jsonp(f):
@@ -116,7 +109,7 @@ def api_vendors():
             if request.args.get('minDist'):
                 query['geo']['$nearSphere']['$minDistance'] = int(request.args.get('minDist'))
 
-    data = db.va.find(query, output).limit(limit)
+    data = g.db.va.find(query, output).limit(limit)
 
     if data.count() == 0:
         resp = json.dumps({'status': '204', 'message': 'no results returned'})
@@ -134,14 +127,14 @@ def api_vendors():
                 vendor_list[item['slug']]['category'] = item['category']
             if 'score' in item:
                 vendor_list[item['slug']]['score'] = item['score']
-            if 'geo' in item:
+            if 'geo' in item and 'coordinates' in item['geo']:
                 vendor_list[item['slug']]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
                                                             'longitude': item['geo']['coordinates'][0]}
-            if request.args.get('lat') is not None:
-                vendor_list[item['slug']]['dist'] = round(great_circle(float(request.args.get('lng')),
-                                                                       float(request.args.get('lat')),
-                                                                       item['geo']['coordinates'][0],
-                                                                       item['geo']['coordinates'][1]), 2)
+                if request.args.get('lat') is not None:
+                    vendor_list[item['slug']]['dist'] = round(great_circle(float(request.args.get('lng')),
+                                                                           float(request.args.get('lat')),
+                                                                           item['geo']['coordinates'][0],
+                                                                           item['geo']['coordinates'][1]), 2)
 
         if request.args.get('pretty') == 'true':
             resp = json.dumps(vendor_list, indent=4)
@@ -153,16 +146,16 @@ def api_vendors():
 @app.route('/vendor/<vendorid>')
 @support_jsonp
 def api_vendor(vendorid):
-    data = db.va.find({'slug': vendorid}, {'name': 1,
-                                           'address': 1,
-                                           'city': 1,
-                                           'locality': 1,
-                                           'type': 1,
-                                           'category': 1,
-                                           'slug': 1,
-                                           'score': 1,
-                                           'inspections.0': {'$slice': 1},
-                                           'geo.coordinates': 1}).sort('inspection.date')
+    data = g.db.va.find({'slug': vendorid}, {'name': 1,
+                                             'address': 1,
+                                             'city': 1,
+                                             'locality': 1,
+                                             'type': 1,
+                                             'category': 1,
+                                             'slug': 1,
+                                             'score': 1,
+                                             'inspections.0': {'$slice': 1},
+                                             'geo.coordinates': 1}).sort('inspection.date')
     if data.count() == 1:
         item = data[0]
 
@@ -248,7 +241,7 @@ def api_inspections():
     score_below = 101 if request.args.get('score_below') is None else int(request.args.get('score_below'))
     score_above = 0 if request.args.get('score_above') is None else int(request.args.get('score_above'))
 
-    data = db.va.find(query, output).limit(limit)
+    data = g.db.va.find(query, output).limit(limit)
 
     if data.count() == 0:
         resp = json.dumps({'Status': 204, 'Message': 'No results returned'})
@@ -276,10 +269,15 @@ def api_inspections():
 
                     if 'violations' in inspection:
                         for violation in inspection['violations']:
-                            if request.args.get('violation_text') is not None and request.args.get('violation_text') in violation['observation']:
-                                inspections[index]['violations'].append(violation)
-                            elif request.args.get('violation_code') is not None and request.args.get('violation_code') in violation['code']:
-                                inspections[index]['violations'].append(violation)
+
+                            if request.args.get('violation_text') is not None:
+                                if 'observation' in violation:
+                                    if violation['observation'] is not None and request.args.get('violation_text') in violation['observation']:
+                                        inspections[index]['violations'].append(violation)
+                            elif request.args.get('violation_code') is not None:
+                                if 'code' in violation:
+                                    if violation['code'] is not None and request.args.get('violation_code') in violation['code']:
+                                        inspections[index]['violations'].append(violation)
                             elif request.args.get('violation_text') is None and request.args.get('violation_code') is None:
                                 inspections[index]['violations'].append(violation)
 
@@ -303,7 +301,7 @@ def api_inspections():
 
             if 'score' in item:
                 vendor_list[item['slug']]['score'] = item['score']
-            if 'geo' in item:
+            if 'geo' in item and 'coordinates' in item['geo']:
                 vendor_list[item['slug']]['coordinates'] = {'latitude': item['geo']['coordinates'][1],
                                                             'longitude': item['geo']['coordinates'][0]}
         if request.args.get('pretty') == 'true':
