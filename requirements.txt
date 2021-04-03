@@ -5,7 +5,7 @@ Werkzeug==0.9.4
 beautifulsoup4==4.3.2
 dumptruck==0.1.5
 geopy==0.99
-gunicorn==18.0
+gunicorn==19.4.0
 itsdangerous==0.23
 pymongo==2.6.3
 python-dateutil==2.2
